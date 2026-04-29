@@ -18,6 +18,8 @@ import { formatDateISO } from "@/lib/utils";
 import { cancelLocalReminder } from "@/lib/notifications";
 import type { Reminder } from "@/types";
 
+// ─── Upcoming events ────────────────────────────────────────────────────────
+
 interface CalendarEvent {
   id: string;
   petName: string;
@@ -27,28 +29,84 @@ interface CalendarEvent {
   detail?: string;
 }
 
-const TYPE_CONFIG = {
-  vaccine: { label: "Vacina", color: "bg-blue-100", textColor: "text-blue-600", icon: "shield-checkmark-outline" },
-  medication: { label: "Medicamento", color: "bg-amber-100", textColor: "text-amber-600", icon: "medical-outline" },
-  procedure: { label: "Procedimento", color: "bg-purple-100", textColor: "text-purple-600", icon: "document-text-outline" },
+const EVENT_CONFIG = {
+  vaccine:   { label: "Vacina",        color: "bg-blue-100",   textColor: "text-blue-600",   icon: "shield-checkmark-outline" },
+  medication:{ label: "Medicamento",   color: "bg-amber-100",  textColor: "text-amber-600",  icon: "medical-outline" },
+  procedure: { label: "Procedimento",  color: "bg-purple-100", textColor: "text-purple-600", icon: "document-text-outline" },
 } as const;
 
-const REMINDER_TYPE_CONFIG = {
-  vaccine: { color: "bg-blue-100", textColor: "text-blue-600", icon: "shield-checkmark-outline" },
-  medication: { color: "bg-amber-100", textColor: "text-amber-600", icon: "medical-outline" },
+// ─── Reminders ──────────────────────────────────────────────────────────────
+
+const REMINDER_CONFIG = {
+  vaccine:   { color: "bg-blue-100",   textColor: "text-blue-600",   icon: "shield-checkmark-outline" },
+  medication:{ color: "bg-amber-100",  textColor: "text-amber-600",  icon: "medical-outline" },
   procedure: { color: "bg-purple-100", textColor: "text-purple-600", icon: "document-text-outline" },
-  custom: { color: "bg-sage-100", textColor: "text-sage-600", icon: "notifications-outline" },
+  custom:    { color: "bg-sage-100",   textColor: "text-sage-600",   icon: "notifications-outline" },
 } as const;
 
 const RECURRENCE_LABEL: Record<string, string> = {
-  once: "Uma vez",
-  daily: "Diário",
-  weekly: "Semanal",
-  monthly: "Mensal",
-  yearly: "Anual",
+  once: "Uma vez", daily: "Diário", weekly: "Semanal", monthly: "Mensal", yearly: "Anual",
 };
 
-type Panel = "events" | "reminders";
+// ─── Timeline ───────────────────────────────────────────────────────────────
+
+type TimelineEventType = "vaccine" | "medication_start" | "medication_end" | "procedure" | "symptom";
+
+interface TimelineEntry {
+  id: string;
+  petName: string;
+  eventType: TimelineEventType;
+  title: string;
+  date: string;       // YYYY-MM-DD for grouping
+  datetime: string;   // full ISO string for sorting
+  note?: string;
+  severity?: "low" | "medium" | "high";
+}
+
+type FlatItem =
+  | { kind: "header"; label: string; date: string }
+  | { kind: "entry"; entry: TimelineEntry };
+
+const TIMELINE_CONFIG: Record<TimelineEventType, { label: string; color: string; textColor: string; icon: string }> = {
+  vaccine:          { label: "Vacina aplicada",   color: "bg-blue-100",   textColor: "text-blue-600",   icon: "shield-checkmark-outline" },
+  medication_start: { label: "Medicamento",        color: "bg-amber-100",  textColor: "text-amber-600",  icon: "medical-outline" },
+  medication_end:   { label: "Fim do tratamento",  color: "bg-orange-100", textColor: "text-orange-600", icon: "medical-outline" },
+  procedure:        { label: "Procedimento",        color: "bg-purple-100", textColor: "text-purple-600", icon: "document-text-outline" },
+  symptom:          { label: "Anotação",            color: "bg-sage-100",   textColor: "text-sage-600",   icon: "journal-outline" },
+};
+
+const SYMPTOM_SEVERITY: Record<string, { color: string; textColor: string }> = {
+  low:    { color: "bg-sage-100",   textColor: "text-sage-600" },
+  medium: { color: "bg-amber-100",  textColor: "text-amber-600" },
+  high:   { color: "bg-red-100",    textColor: "text-red-600" },
+};
+
+function formatDateHeader(iso: string): string {
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  if (iso === today) return "Hoje";
+  if (iso === yesterday) return "Ontem";
+  return formatDateISO(iso);
+}
+
+function buildFlatItems(entries: TimelineEntry[]): FlatItem[] {
+  const items: FlatItem[] = [];
+  let lastDate = "";
+  for (const entry of entries) {
+    if (entry.date !== lastDate) {
+      lastDate = entry.date;
+      items.push({ kind: "header", date: entry.date, label: formatDateHeader(entry.date) });
+    }
+    items.push({ kind: "entry", entry });
+  }
+  return items;
+}
+
+// ─── Panel ──────────────────────────────────────────────────────────────────
+
+type Panel = "events" | "reminders" | "timeline";
+
+// ─── Screen ─────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
   const { user } = useAuth();
@@ -64,33 +122,44 @@ export default function CalendarScreen() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const [timeline, setTimeline] = useState<FlatItem[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(true);
+
   useFocusEffect(
     useCallback(() => {
       if (user) {
         fetchEvents();
         fetchReminders();
+        fetchTimeline();
       } else {
         setEventsLoading(false);
         setRemindersLoading(false);
+        setTimelineLoading(false);
       }
     }, [user])
   );
 
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  async function getPetMap(): Promise<{ map: Record<string, string>; ids: string[] }> {
+    const [ownedRes, memberRes] = await Promise.all([
+      supabase.from("pets").select("id, name").eq("user_id", user!.id),
+      supabase.from("pet_members").select("pet_id, pets(id, name)").eq("user_id", user!.id),
+    ]);
+    const map: Record<string, string> = {};
+    (ownedRes.data ?? []).forEach((p) => { map[p.id] = p.name; });
+    (memberRes.data ?? []).forEach((m: any) => { if (m.pets) map[m.pets.id] = m.pets.name; });
+    return { map, ids: Object.keys(map) };
+  }
+
+  // ── fetchEvents ────────────────────────────────────────────────────────────
+
   async function fetchEvents() {
     setEventsLoading(true);
-
-    const { data: ownedPets } = await supabase.from("pets").select("id, name").eq("user_id", user!.id);
-    const { data: memberships } = await supabase.from("pet_members").select("pet_id, pets(id, name)").eq("user_id", user!.id);
-
-    const petMap: Record<string, string> = {};
-    (ownedPets ?? []).forEach((p) => { petMap[p.id] = p.name; });
-    (memberships ?? []).forEach((m: any) => { if (m.pets) petMap[m.pets.id] = m.pets.name; });
-
-    const petIds = Object.keys(petMap);
+    const { map: petMap, ids: petIds } = await getPetMap();
     if (petIds.length === 0) { setEvents([]); setEventsLoading(false); return; }
 
     const today = new Date().toISOString().split("T")[0];
-
     const [vaccinesRes, medsRes, procsRes] = await Promise.all([
       supabase.from("vaccines").select("id, pet_id, name, next_dose_at").in("pet_id", petIds).not("next_dose_at", "is", null).gte("next_dose_at", today).order("next_dose_at"),
       supabase.from("medications").select("id, pet_id, name, ends_at").in("pet_id", petIds).eq("active", true).not("ends_at", "is", null).gte("ends_at", today).order("ends_at"),
@@ -98,52 +167,22 @@ export default function CalendarScreen() {
     ]);
 
     const ev: CalendarEvent[] = [];
-
-    (vaccinesRes.data ?? []).forEach((v) => ev.push({
-      id: `vaccine-${v.id}`,
-      petName: petMap[v.pet_id],
-      type: "vaccine",
-      title: `Próxima dose: ${v.name}`,
-      date: v.next_dose_at!,
-    }));
-
-    (medsRes.data ?? []).forEach((m) => ev.push({
-      id: `med-${m.id}`,
-      petName: petMap[m.pet_id],
-      type: "medication",
-      title: m.name,
-      date: m.ends_at!,
-      detail: "Fim do tratamento",
-    }));
-
-    (procsRes.data ?? []).forEach((p) => ev.push({
-      id: `proc-${p.id}`,
-      petName: petMap[p.pet_id],
-      type: "procedure",
-      title: p.title,
-      date: p.performed_at,
-    }));
-
+    (vaccinesRes.data ?? []).forEach((v) => ev.push({ id: `vaccine-${v.id}`, petName: petMap[v.pet_id], type: "vaccine", title: `Próxima dose: ${v.name}`, date: v.next_dose_at! }));
+    (medsRes.data ?? []).forEach((m) => ev.push({ id: `med-${m.id}`, petName: petMap[m.pet_id], type: "medication", title: m.name, date: m.ends_at!, detail: "Fim do tratamento" }));
+    (procsRes.data ?? []).forEach((p) => ev.push({ id: `proc-${p.id}`, petName: petMap[p.pet_id], type: "procedure", title: p.title, date: p.performed_at }));
     ev.sort((a, b) => a.date.localeCompare(b.date));
     setEvents(ev);
     setEventsLoading(false);
   }
 
+  // ── fetchReminders ─────────────────────────────────────────────────────────
+
   async function fetchReminders() {
     setRemindersLoading(true);
-
-    const { data: ownedPets } = await supabase.from("pets").select("id").eq("user_id", user!.id);
-    const { data: memberships } = await supabase.from("pet_members").select("pet_id").eq("user_id", user!.id);
-
-    const petIds = [
-      ...(ownedPets ?? []).map((p) => p.id),
-      ...(memberships ?? []).map((m: any) => m.pet_id),
-    ];
-
+    const { ids: petIds } = await getPetMap();
     if (petIds.length === 0) { setReminders([]); setRemindersLoading(false); return; }
 
     const today = new Date().toISOString().split("T")[0];
-
     const { data } = await supabase
       .from("reminders")
       .select("*, pets(name)")
@@ -156,10 +195,89 @@ export default function CalendarScreen() {
     setRemindersLoading(false);
   }
 
+  // ── fetchTimeline ──────────────────────────────────────────────────────────
+
+  async function fetchTimeline() {
+    setTimelineLoading(true);
+    const { map: petMap, ids: petIds } = await getPetMap();
+    if (petIds.length === 0) { setTimeline([]); setTimelineLoading(false); return; }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const [vacRes, medRes, procRes, logRes] = await Promise.all([
+      supabase.from("vaccines").select("id, pet_id, name, applied_at").in("pet_id", petIds).lte("applied_at", today).order("applied_at", { ascending: false }).limit(60),
+      supabase.from("medications").select("id, pet_id, name, started_at, ends_at, active").in("pet_id", petIds).order("started_at", { ascending: false }).limit(60),
+      supabase.from("procedures").select("id, pet_id, type, title, performed_at, description").in("pet_id", petIds).lte("performed_at", today).order("performed_at", { ascending: false }).limit(60),
+      supabase.from("symptom_logs").select("id, pet_id, noted_at, description, severity").in("pet_id", petIds).order("noted_at", { ascending: false }).limit(60),
+    ]);
+
+    const entries: TimelineEntry[] = [];
+
+    (vacRes.data ?? []).forEach((v) => entries.push({
+      id: `vac-${v.id}`,
+      petName: petMap[v.pet_id] ?? "",
+      eventType: "vaccine",
+      title: v.name,
+      date: v.applied_at,
+      datetime: v.applied_at,
+    }));
+
+    (medRes.data ?? []).forEach((m) => {
+      entries.push({
+        id: `med-start-${m.id}`,
+        petName: petMap[m.pet_id] ?? "",
+        eventType: "medication_start",
+        title: m.name,
+        date: m.started_at,
+        datetime: m.started_at,
+        note: "Início do tratamento",
+      });
+      const endDate = m.ends_at as string | null;
+      if (endDate && endDate <= today) {
+        entries.push({
+          id: `med-end-${m.id}`,
+          petName: petMap[m.pet_id] ?? "",
+          eventType: "medication_end",
+          title: m.name,
+          date: endDate,
+          datetime: endDate,
+        });
+      }
+    });
+
+    (procRes.data ?? []).forEach((p) => entries.push({
+      id: `proc-${p.id}`,
+      petName: petMap[p.pet_id] ?? "",
+      eventType: "procedure",
+      title: p.title,
+      date: p.performed_at,
+      datetime: p.performed_at,
+      note: p.description ?? undefined,
+    }));
+
+    (logRes.data ?? []).forEach((l) => entries.push({
+      id: `log-${l.id}`,
+      petName: petMap[l.pet_id] ?? "",
+      eventType: "symptom",
+      title: l.description.length > 60 ? l.description.slice(0, 57) + "…" : l.description,
+      date: l.noted_at.split("T")[0],
+      datetime: l.noted_at,
+      severity: l.severity,
+    }));
+
+    // Sort descending
+    entries.sort((a, b) => b.datetime.localeCompare(a.datetime));
+
+    // Cap at 150 most recent
+    setTimeline(buildFlatItems(entries.slice(0, 150)));
+    setTimelineLoading(false);
+  }
+
+  // ── reminder actions ───────────────────────────────────────────────────────
+
   async function toggleReminder(reminder: Reminder) {
     setTogglingId(reminder.id);
     const newEnabled = !reminder.enabled;
-
     await supabase.from("reminders").update({ enabled: newEnabled }).eq("id", reminder.id);
     setReminders((prev) => prev.map((r) => r.id === reminder.id ? { ...r, enabled: newEnabled } : r));
     setTogglingId(null);
@@ -167,9 +285,7 @@ export default function CalendarScreen() {
 
   async function deleteReminder(reminder: Reminder) {
     setDeletingId(reminder.id);
-    if (reminder.local_notification_id) {
-      await cancelLocalReminder(reminder.local_notification_id);
-    }
+    if (reminder.local_notification_id) await cancelLocalReminder(reminder.local_notification_id);
     await supabase.from("reminders").delete().eq("id", reminder.id);
     setReminders((prev) => prev.filter((r) => r.id !== reminder.id));
     setDeletingId(null);
@@ -188,25 +304,18 @@ export default function CalendarScreen() {
       window.open(`https://calendar.google.com/calendar/render?${params}`, "_blank");
       return;
     }
-
     setAddingId(event.id);
     try {
       const { status } = await ExpoCalendar.requestCalendarPermissionsAsync();
-      if (status !== "granted") { setAddingId(null); return; }
-
+      if (status !== "granted") return;
       const calendars = await ExpoCalendar.getCalendarsAsync(ExpoCalendar.EntityTypes.EVENT);
-      const defaultCal = calendars.find((c) => c.allowsModifications && c.isPrimary)
-        ?? calendars.find((c) => c.allowsModifications);
-
-      if (!defaultCal) { setAddingId(null); return; }
-
+      const cal = calendars.find((c) => c.allowsModifications && c.isPrimary) ?? calendars.find((c) => c.allowsModifications);
+      if (!cal) return;
       const startDate = new Date(event.date + "T09:00:00");
       const endDate = new Date(event.date + "T10:00:00");
-
-      await ExpoCalendar.createEventAsync(defaultCal.id, {
+      await ExpoCalendar.createEventAsync(cal.id, {
         title: `${event.petName} — ${event.title}`,
-        startDate,
-        endDate,
+        startDate, endDate,
         notes: event.detail ?? "",
         alarms: [{ relativeOffset: -1440 }],
       });
@@ -215,16 +324,22 @@ export default function CalendarScreen() {
     }
   }
 
-  const loading = panel === "events" ? eventsLoading : remindersLoading;
+  // ── render ─────────────────────────────────────────────────────────────────
+
+  const loading = panel === "events" ? eventsLoading : panel === "reminders" ? remindersLoading : timelineLoading;
+
+  const PANEL_LABELS: Record<Panel, string> = {
+    events: "Próximos",
+    reminders: "Lembretes",
+    timeline: "Histórico",
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
         <View>
           <Text className="text-2xl font-bold text-sage-700">Agenda</Text>
-          <Text className="text-sage-400 text-sm">
-            {panel === "events" ? "Próximos eventos dos seus pets" : "Seus lembretes"}
-          </Text>
+          <Text className="text-sage-400 text-sm">{PANEL_LABELS[panel]}</Text>
         </View>
         {panel === "reminders" && (
           <TouchableOpacity
@@ -236,10 +351,9 @@ export default function CalendarScreen() {
         )}
       </View>
 
-      {/* Toggle de painel */}
+      {/* Panel toggle — 3 abas */}
       <View className="flex-row mx-5 bg-white rounded-2xl p-1 shadow-sm mb-3">
-        {(["events", "reminders"] as Panel[]).map((p) => {
-          const labels = { events: "Próximos eventos", reminders: "Lembretes" };
+        {(["events", "reminders", "timeline"] as Panel[]).map((p) => {
           const active = panel === p;
           return (
             <TouchableOpacity
@@ -248,7 +362,7 @@ export default function CalendarScreen() {
               onPress={() => setPanel(p)}
             >
               <Text className={`text-xs font-medium ${active ? "text-white" : "text-sage-500"}`}>
-                {labels[p]}
+                {PANEL_LABELS[p]}
               </Text>
             </TouchableOpacity>
           );
@@ -259,14 +373,13 @@ export default function CalendarScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#7da87b" size="large" />
         </View>
+
       ) : panel === "events" ? (
         events.length === 0 ? (
           <View className="flex-1 items-center justify-center px-8">
             <Text className="text-5xl mb-4">🎉</Text>
             <Text className="text-xl font-semibold text-sage-600 text-center">Nenhum evento próximo</Text>
-            <Text className="text-sage-400 text-center mt-2">
-              Vacinas, medicamentos e procedimentos futuros aparecem aqui.
-            </Text>
+            <Text className="text-sage-400 text-center mt-2">Vacinas, medicamentos e procedimentos futuros aparecem aqui.</Text>
           </View>
         ) : (
           <FlatList
@@ -275,7 +388,7 @@ export default function CalendarScreen() {
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
-              const cfg = TYPE_CONFIG[item.type];
+              const cfg = EVENT_CONFIG[item.type];
               const isAdding = addingId === item.id;
               return (
                 <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
@@ -293,17 +406,12 @@ export default function CalendarScreen() {
                     </View>
                     <Text className="text-sage-600 text-sm font-medium ml-2">{formatDateISO(item.date)}</Text>
                   </View>
-
                   <TouchableOpacity
                     className="mt-3 pt-3 border-t border-sage-100 flex-row items-center gap-1"
                     onPress={() => addToNativeCalendar(item)}
                     disabled={isAdding}
                   >
-                    {isAdding ? (
-                      <ActivityIndicator size="small" color="#7da87b" />
-                    ) : (
-                      <Ionicons name="calendar-outline" size={14} color="#7da87b" />
-                    )}
+                    {isAdding ? <ActivityIndicator size="small" color="#7da87b" /> : <Ionicons name="calendar-outline" size={14} color="#7da87b" />}
                     <Text className="text-sage-500 text-xs font-medium">
                       {Platform.OS === "web" ? "Abrir no Google Calendar" : "Adicionar ao calendário"}
                     </Text>
@@ -313,14 +421,13 @@ export default function CalendarScreen() {
             }}
           />
         )
-      ) : (
+
+      ) : panel === "reminders" ? (
         reminders.length === 0 ? (
           <View className="flex-1 items-center justify-center px-8">
             <Text className="text-5xl mb-4">🔔</Text>
             <Text className="text-xl font-semibold text-sage-600 text-center">Nenhum lembrete</Text>
-            <Text className="text-sage-400 text-center mt-2">
-              Toque no + para criar um lembrete com notificação.
-            </Text>
+            <Text className="text-sage-400 text-center mt-2">Toque no + para criar um lembrete com notificação.</Text>
           </View>
         ) : (
           <FlatList
@@ -329,7 +436,7 @@ export default function CalendarScreen() {
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
-              const cfg = REMINDER_TYPE_CONFIG[item.type];
+              const cfg = REMINDER_CONFIG[item.type];
               const petName = (item as any).pets?.name ?? "";
               const isDeleting = deletingId === item.id;
               const isToggling = togglingId === item.id;
@@ -338,7 +445,7 @@ export default function CalendarScreen() {
                   <View className="flex-row items-start justify-between">
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2 mb-1">
-                        <View className={`${cfg.color} px-2 py-0.5 rounded-full flex-row items-center gap-1`}>
+                        <View className={`${cfg.color} px-2 py-0.5 rounded-full`}>
                           <Ionicons name={cfg.icon as any} size={11} color="" className={cfg.textColor} />
                         </View>
                         {petName ? <Text className="text-sage-400 text-xs">{petName}</Text> : null}
@@ -354,7 +461,6 @@ export default function CalendarScreen() {
                       <Text className="text-sage-400 text-xs">{item.time_of_day.slice(0, 5)}</Text>
                     </View>
                   </View>
-
                   <View className="mt-3 pt-3 border-t border-sage-100 flex-row items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       {isToggling ? (
@@ -370,15 +476,73 @@ export default function CalendarScreen() {
                       )}
                       <Text className="text-sage-500 text-xs">{item.enabled ? "Ativo" : "Inativo"}</Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => deleteReminder(item)}
-                      disabled={isDeleting}
-                      className="p-1"
-                    >
-                      {isDeleting
-                        ? <ActivityIndicator size="small" color="#ef4444" />
-                        : <Ionicons name="trash-outline" size={16} color="#ef4444" />}
+                    <TouchableOpacity onPress={() => deleteReminder(item)} disabled={isDeleting} className="p-1">
+                      {isDeleting ? <ActivityIndicator size="small" color="#ef4444" /> : <Ionicons name="trash-outline" size={16} color="#ef4444" />}
                     </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            }}
+          />
+        )
+
+      ) : (
+        /* ── Timeline / Histórico ── */
+        timeline.length === 0 ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <Text className="text-5xl mb-4">📋</Text>
+            <Text className="text-xl font-semibold text-sage-600 text-center">Sem histórico ainda</Text>
+            <Text className="text-sage-400 text-center mt-2">Vacinas, medicamentos, procedimentos e anotações aparecerão aqui.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={timeline}
+            keyExtractor={(item) => item.kind === "header" ? `h-${item.date}` : item.entry.id}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              if (item.kind === "header") {
+                return (
+                  <View className="mb-2 mt-4 first:mt-0">
+                    <Text className="text-xs font-bold text-sage-500 uppercase tracking-wide">{item.label}</Text>
+                  </View>
+                );
+              }
+
+              const { entry } = item;
+              const cfg = TIMELINE_CONFIG[entry.eventType];
+              const sevCfg = entry.severity ? SYMPTOM_SEVERITY[entry.severity] : null;
+              const badgeColor = sevCfg?.color ?? cfg.color;
+              const badgeTextColor = sevCfg?.textColor ?? cfg.textColor;
+
+              // Format time for symptom logs (they have full datetime)
+              const timeStr = entry.eventType === "symptom" && entry.datetime.includes("T")
+                ? new Date(entry.datetime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                : null;
+
+              return (
+                <View className="bg-white rounded-2xl p-4 mb-2 shadow-sm">
+                  <View className="flex-row items-start gap-3">
+                    {/* Left: colored dot */}
+                    <View className={`w-8 h-8 rounded-full ${badgeColor} items-center justify-center mt-0.5 shrink-0`}>
+                      <Ionicons name={cfg.icon as any} size={14} color="" className={badgeTextColor} />
+                    </View>
+
+                    <View className="flex-1">
+                      <View className="flex-row items-center justify-between mb-0.5">
+                        <View className="flex-row items-center gap-2 flex-1">
+                          <Text className={`text-xs font-semibold ${badgeTextColor}`}>{cfg.label}</Text>
+                          <Text className="text-sage-400 text-xs">· {entry.petName}</Text>
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-sage-400 text-xs">{timeStr ?? ""}</Text>
+                        </View>
+                      </View>
+                      <Text className="text-sage-800 font-medium text-sm">{entry.title}</Text>
+                      {entry.note && (
+                        <Text className="text-sage-400 text-xs mt-0.5" numberOfLines={2}>{entry.note}</Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               );
