@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication } from "@/types";
+import type { Pet, Vaccine, Medication, Procedure } from "@/types";
 
 type Tab = "vaccines" | "medications" | "procedures";
 
@@ -34,6 +34,7 @@ export default function PetDetailScreen() {
   const [pet, setPet] = useState<Pet | null>(null);
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("vaccines");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -48,10 +49,11 @@ export default function PetDetailScreen() {
   }, [id]);
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
+      supabase.from("procedures").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -59,6 +61,7 @@ export default function PetDetailScreen() {
 
     setVaccines(vaccinesRes.data ?? []);
     setMedications(medsRes.data ?? []);
+    setProcedures(procsRes.data ?? []);
     setLoading(false);
   }
 
@@ -273,9 +276,54 @@ export default function PetDetailScreen() {
         )}
 
         {activeTab === "procedures" && (
-          <View className="items-center mt-8">
-            <Text className="text-sage-300 text-lg">Em breve</Text>
-          </View>
+          <>
+            <TouchableOpacity
+              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
+              onPress={() => router.push(`/(app)/pet/${id}/add-procedure` as any)}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">Registrar procedimento</Text>
+            </TouchableOpacity>
+
+            {procedures.length === 0 ? (
+              <View className="items-center mt-8">
+                <Text className="text-sage-300 text-lg">Nenhum procedimento registrado</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={procedures}
+                keyExtractor={(p) => p.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-1">
+                        <View className="flex-row items-center gap-2 mb-0.5">
+                          <View className="bg-sage-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-sage-600 text-xs font-medium">
+                              {PROCEDURE_TYPE_LABEL[item.type]}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text className="font-semibold text-sage-800">{item.title}</Text>
+                        {item.vet_name && (
+                          <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
+                        )}
+                      </View>
+                      <Text className="text-sage-600 text-sm font-medium">
+                        {formatDateISO(item.performed_at)}
+                      </Text>
+                    </View>
+                    {item.description && (
+                      <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
+                        {item.description}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              />
+            )}
+          </>
         )}
       </View>
     </SafeAreaView>
