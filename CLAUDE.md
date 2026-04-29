@@ -46,27 +46,53 @@ Tasks simples e bem definidas. Usar quando:
 
 ---
 
-## Backlog Priorizado
+## Backlog
 
-### 🔴 Crítico (bloqueia produção)
-- [ ] T5: Error boundaries — erros não tratados derrubam o app inteiro
+> **Produto** = o que o usuário vê e usa. Decisão de negócio, afeta UX.
+> **Técnico** = infraestrutura, qualidade, segurança. Invisível ao usuário mas essencial para produção.
+
+---
+
+### 🔴 Crítico
+
+| Tipo | Item | Status |
+|------|------|--------|
+| Técnico | T5: Error boundaries — erros derrubavam o app inteiro | ✅ |
+
+---
 
 ### 🟠 Alto
-- [ ] T3: `jest-expo` na versão errada — fixar para `~54.0.17`
-- [ ] T10: Tela de perfil funcional (nome do usuário, trocar senha)
-- [ ] Tela de Procedimentos — existe no tab mas mostra "Em breve"
+
+| Tipo | Item | Status |
+|------|------|--------|
+| Técnico | T3: `jest-expo` versão incompatível com Expo SDK 54 | ✅ |
+| Produto | Tela de Procedimentos (consultas, cirurgias, exames) | [ ] |
+| Produto | Tela de Perfil (nome do usuário, trocar senha) | [ ] |
+
+---
 
 ### 🟡 Médio
-- [ ] T2: Upload de foto dos pets (campo `photo_url` existe no schema)
-- [ ] T4: Paginação nas listas de vacinas e medicamentos
-- [ ] T6: CI/CD com GitHub Actions (rodar testes no push)
+
+| Tipo | Item | Status |
+|------|------|--------|
+| Produto | T2: Upload de foto dos pets | [ ] |
+| Produto | Agenda/Calendário interno (próximas doses, meds ativos) | [ ] |
+| Produto | Documentos (upload de exames PDF/foto) | [ ] |
+| Produto | Notificações (lembrete vacina e medicamento) | [ ] |
+| Técnico | T4: Paginação nas listas de vacinas e medicamentos | [ ] |
+| Técnico | T6: CI/CD com GitHub Actions (rodar testes no push) | [ ] |
+
+---
 
 ### 🟢 Baixo / Futuro
-- [ ] T8: Push notifications
-- [ ] T9: Modo offline
-- [ ] OCR de carteira de vacina (Claude Vision API)
-- [ ] Integração com calendário nativo (expo-calendar)
-- [ ] T11: i18n
+
+| Tipo | Item | Status |
+|------|------|--------|
+| Produto | OCR de carteira de vacina (Claude Vision API) | [ ] |
+| Produto | Integração com calendário nativo (iOS/Google/Android) | [ ] |
+| Técnico | T8: Push notifications (infra — FCM/APNs) | [ ] |
+| Técnico | T9: Modo offline básico | [ ] |
+| Técnico | T11: i18n para expansão além do Brasil | [ ] |
 
 ---
 
