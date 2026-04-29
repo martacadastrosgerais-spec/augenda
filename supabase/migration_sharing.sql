@@ -55,20 +55,22 @@ create table if not exists pet_members (
 
 alter table pet_members enable row level security;
 
+-- Funções security definer para evitar recursão circular entre pets e pet_members
+create or replace function is_pet_owner(p_pet_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (select 1 from pets where id = p_pet_id and user_id = auth.uid())
+$$;
+
+create or replace function is_pet_member(p_pet_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (select 1 from pet_members where pet_id = p_pet_id and user_id = auth.uid())
+$$;
+
 -- Dono e membros veem a lista de membros do pet
 create policy "membros veem lista" on pet_members
   for select using (
-    exists (
-      select 1 from pets
-      where pets.id = pet_members.pet_id
-        and (
-          pets.user_id = auth.uid()
-          or exists (
-            select 1 from pet_members pm2
-            where pm2.pet_id = pet_members.pet_id and pm2.user_id = auth.uid()
-          )
-        )
-    )
+    auth.uid() = user_id
+    or is_pet_owner(pet_id)
   );
 
 -- Usuário pode adicionar a si mesmo (ao aceitar convite) ou dono adiciona outros
@@ -128,15 +130,9 @@ drop policy if exists "usuarios gerenciam seus pets" on pets;
 create policy "dono gerencia pet" on pets
   for all using (auth.uid() = user_id);
 
--- Membros têm acesso de leitura
+-- Membros têm acesso de leitura (via função para evitar recursão)
 create policy "membros visualizam pet" on pets
-  for select using (
-    exists (
-      select 1 from pet_members
-      where pet_members.pet_id = pets.id
-        and pet_members.user_id = auth.uid()
-    )
-  );
+  for select using (is_pet_member(id));
 
 -- ─────────────────────────────────────────
 -- 5. Atualizar RLS de vacinas, medicamentos e procedimentos

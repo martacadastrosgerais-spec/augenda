@@ -69,35 +69,56 @@ describe("formatDateISO", () => {
 });
 
 describe("getAge", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2024, 5, 15, 12, 0, 0)); // June 15 local noon — avoids timezone day shift
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("retorna null para data undefined", () => {
     expect(getAge(undefined)).toBeNull();
   });
 
-  it("retorna meses para pet com menos de 1 ano", () => {
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    const iso = threeMonthsAgo.toISOString().split("T")[0];
-    expect(getAge(iso)).toBe("3 meses");
+  it("retorna dias para pet com menos de 1 mês", () => {
+    expect(getAge("2024-06-05")).toBe("10 dias");
+  });
+
+  it("retorna 1 dia no singular", () => {
+    expect(getAge("2024-06-14")).toBe("1 dia");
+  });
+
+  it("retorna apenas meses quando dias = 0", () => {
+    expect(getAge("2024-03-15")).toBe("3 meses");
   });
 
   it("retorna 1 mês no singular", () => {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const iso = oneMonthAgo.toISOString().split("T")[0];
-    expect(getAge(iso)).toBe("1 mês");
+    expect(getAge("2024-05-15")).toBe("1 mês");
   });
 
-  it("retorna anos para pet com mais de 1 ano", () => {
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    const iso = twoYearsAgo.toISOString().split("T")[0];
-    expect(getAge(iso)).toBe("2 anos");
+  it("retorna meses e dias", () => {
+    expect(getAge("2024-03-10")).toBe("3 meses e 5 dias");
+  });
+
+  it("retorna apenas anos quando meses e dias = 0", () => {
+    expect(getAge("2022-06-15")).toBe("2 anos");
   });
 
   it("retorna 1 ano no singular", () => {
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const iso = oneYearAgo.toISOString().split("T")[0];
-    expect(getAge(iso)).toBe("1 ano");
+    expect(getAge("2023-06-15")).toBe("1 ano");
+  });
+
+  it("retorna anos e meses quando dias = 0", () => {
+    expect(getAge("2022-03-15")).toBe("2 anos e 3 meses");
+  });
+
+  it("retorna anos, meses e dias", () => {
+    expect(getAge("2022-03-10")).toBe("2 anos, 3 meses e 5 dias");
+  });
+
+  it("retorna anos e dias quando meses = 0", () => {
+    expect(getAge("2022-06-10")).toBe("2 anos e 5 dias");
   });
 });

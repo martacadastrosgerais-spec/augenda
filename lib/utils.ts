@@ -23,13 +23,33 @@ export function formatDateISO(dateStr?: string): string {
 
 export function getAge(birthDate?: string): string | null {
   if (!birthDate) return null;
-  const birth = new Date(birthDate);
+  const birth = new Date(birthDate + "T00:00:00");
   const now = new Date();
-  const months =
-    (now.getFullYear() - birth.getFullYear()) * 12 +
-    (now.getMonth() - birth.getMonth());
-  if (months < 1) return "Menos de 1 mês";
-  if (months < 12) return `${months} ${months === 1 ? "mês" : "meses"}`;
-  const years = Math.floor(months / 12);
-  return `${years} ${years === 1 ? "ano" : "anos"}`;
+
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  let days = now.getDate() - birth.getDate();
+
+  if (days < 0) {
+    months--;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years === 0 && months === 0) {
+    if (days < 1) return "Menos de 1 dia";
+    return `${days} ${days === 1 ? "dia" : "dias"}`;
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? "ano" : "anos"}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? "mês" : "meses"}`);
+  if (days > 0) parts.push(`${days} ${days === 1 ? "dia" : "dias"}`);
+
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} e ${parts[1]}`;
+  return `${parts[0]}, ${parts[1]} e ${parts[2]}`;
 }

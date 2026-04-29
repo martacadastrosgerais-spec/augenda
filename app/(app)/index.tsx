@@ -29,8 +29,9 @@ export default function PetsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPets();
-  }, []);
+    if (user) fetchPets();
+    else setLoading(false);
+  }, [user]);
 
   async function fetchPets() {
     if (!user) return;
@@ -50,6 +51,8 @@ export default function PetsScreen() {
       .eq("user_id", user.id);
 
     if (ownedError || memberError) {
+      console.error("[fetchPets] ownedError:", ownedError);
+      console.error("[fetchPets] memberError:", memberError);
       setError("Não foi possível carregar os pets.");
       setLoading(false);
       return;

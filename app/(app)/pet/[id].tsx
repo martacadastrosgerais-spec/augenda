@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   FlatList,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -35,6 +36,7 @@ export default function PetDetailScreen() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("vaccines");
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) fetchData();
@@ -55,6 +57,29 @@ export default function PetDetailScreen() {
     setLoading(false);
   }
 
+
+  async function handleDelete() {
+    const doDelete = async () => {
+      setDeleting(true);
+      await supabase.from("pets").delete().eq("id", id);
+      router.replace("/(app)");
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm(`Deletar ${pet?.name}? Esta ação não pode ser desfeita.`)) {
+        await doDelete();
+      }
+    } else {
+      Alert.alert(
+        "Deletar pet",
+        `Deletar ${pet?.name}? Esta ação não pode ser desfeita.`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Deletar", style: "destructive", onPress: doDelete },
+        ]
+      );
+    }
+  }
 
   if (loading) {
     return (
@@ -77,12 +102,19 @@ export default function PetDetailScreen() {
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700 flex-1">{pet.name}</Text>
         {user?.id === pet.user_id && (
-          <TouchableOpacity
-            onPress={() => router.push(`/(app)/pet/${id}/share`)}
-            className="p-1"
-          >
-            <Ionicons name="people-outline" size={22} color="#527558" />
-          </TouchableOpacity>
+          <View className="flex-row gap-1">
+            <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
+              <Ionicons name="create-outline" size={22} color="#527558" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} disabled={deleting} className="p-1">
+              {deleting
+                ? <ActivityIndicator size="small" color="#ef4444" />
+                : <Ionicons name="trash-outline" size={22} color="#ef4444" />}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
+              <Ionicons name="people-outline" size={22} color="#527558" />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
