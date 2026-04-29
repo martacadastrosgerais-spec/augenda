@@ -96,6 +96,24 @@ export interface Procedure {
   attachments?: Attachment[];
 }
 
+export type ReminderType = "vaccine" | "medication" | "procedure" | "custom";
+export type ReminderRecurrence = "once" | "daily" | "weekly" | "monthly" | "yearly";
+
+export interface Reminder {
+  id: string;
+  pet_id: string;
+  user_id: string;
+  title: string;
+  type: ReminderType;
+  scheduled_date: string;
+  time_of_day: string;
+  recurrence: ReminderRecurrence;
+  enabled: boolean;
+  local_notification_id?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Attachment {
   id: string;
   procedure_id: string;
