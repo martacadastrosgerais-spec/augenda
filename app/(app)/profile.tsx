@@ -23,7 +23,6 @@ export default function ProfileScreen() {
   const [savingName, setSavingName] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
@@ -40,7 +39,6 @@ export default function ProfileScreen() {
       setPasswordError(null);
       setNameSuccess(false);
       setPasswordSuccess(false);
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     }, [user])
@@ -74,7 +72,6 @@ export default function ProfileScreen() {
       setPasswordError("Não foi possível alterar a senha. Tente fazer logout e login novamente.");
     } else {
       setPasswordSuccess(true);
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     }

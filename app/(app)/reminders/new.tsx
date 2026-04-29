@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Switch,
+  Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -104,8 +105,9 @@ export default function NewReminderScreen() {
 
     setLoading(true);
 
+    const petName = pets.find((p) => p.id === selectedPetId)?.name ?? "";
     const localId = await scheduleLocalReminder({
-      title: `${pets.find((p) => p.id === selectedPetId)?.name ?? ""} — ${title.trim()}`,
+      title: `${petName} — ${title.trim()}`,
       body: notes.trim() || "Lembrete AUgenda",
       date: reminderDate,
       recurrence,
@@ -121,7 +123,7 @@ export default function NewReminderScreen() {
       recurrence,
       notes: notes.trim() || null,
       local_notification_id: localId,
-      enabled: true,
+      enabled: localId !== null,
     });
 
     setLoading(false);
@@ -129,9 +131,15 @@ export default function NewReminderScreen() {
     if (dbError) {
       if (localId) cancelLocalReminder(localId);
       setError("Não foi possível salvar o lembrete.");
-    } else {
-      router.back();
+      return;
     }
+
+    if (localId === null && Platform.OS !== "web") {
+      setError("Lembrete salvo, mas as notificações estão desativadas. Ative nas configurações do dispositivo para receber alertas.");
+      return;
+    }
+
+    router.back();
   }
 
   if (loadingPets) {

@@ -7,6 +7,7 @@ import {
   FlatList,
   Share,
   Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -97,28 +98,27 @@ export default function SharePetScreen() {
   }
 
   async function handleRemoveMember(memberId: string, memberEmail?: string) {
-    Alert.alert(
-      "Remover membro",
-      `Remover ${memberEmail ?? "este membro"} do pet?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Remover",
-          style: "destructive",
-          onPress: async () => {
-            const { error: delError } = await supabase
-              .from("pet_members")
-              .delete()
-              .eq("id", memberId);
-            if (delError) {
-              setError("Não foi possível remover o membro.");
-            } else {
-              setMembers((prev) => prev.filter((m) => m.id !== memberId));
-            }
-          },
-        },
-      ]
-    );
+    const confirmed = Platform.OS === "web"
+      ? window.confirm(`Remover ${memberEmail ?? "este membro"} do pet?`)
+      : await new Promise<boolean>((resolve) =>
+          Alert.alert(
+            "Remover membro",
+            `Remover ${memberEmail ?? "este membro"} do pet?`,
+            [
+              { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+              { text: "Remover", style: "destructive", onPress: () => resolve(true) },
+            ]
+          )
+        );
+
+    if (!confirmed) return;
+
+    const { error: delError } = await supabase.from("pet_members").delete().eq("id", memberId);
+    if (delError) {
+      setError("Não foi possível remover o membro.");
+    } else {
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    }
   }
 
   if (loading) {

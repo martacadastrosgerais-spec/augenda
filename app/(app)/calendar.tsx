@@ -142,10 +142,13 @@ export default function CalendarScreen() {
 
     if (petIds.length === 0) { setReminders([]); setRemindersLoading(false); return; }
 
+    const today = new Date().toISOString().split("T")[0];
+
     const { data } = await supabase
       .from("reminders")
       .select("*, pets(name)")
       .in("pet_id", petIds)
+      .or(`recurrence.neq.once,scheduled_date.gte.${today}`)
       .order("scheduled_date")
       .order("time_of_day");
 

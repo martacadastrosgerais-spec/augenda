@@ -10,7 +10,6 @@ import {
   FlatList,
   Platform,
   Share,
-  Clipboard,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -80,14 +79,13 @@ export default function PetDetailScreen() {
   async function shareEmergencyCard() {
     const url = getEmergencyUrl();
     if (Platform.OS === "web") {
-      if (navigator.share) {
+      if (typeof navigator !== "undefined" && navigator.share) {
         navigator.share({ title: `Cartão de emergência — ${pet?.name}`, url });
-      } else {
-        navigator.clipboard?.writeText(url);
-        alert("Link copiado!");
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => alert("Link copiado!"));
       }
     } else {
-      Share.share({ message: `Cartão de emergência de ${pet?.name}: ${url}`, url });
+      Share.share({ message: `Cartão de emergência de ${pet?.name}: ${url}` });
     }
   }
 
