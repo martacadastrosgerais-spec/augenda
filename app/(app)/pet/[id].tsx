@@ -1,0 +1,237 @@
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  FlatList,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { formatDateISO, getAge } from "@/lib/utils";
+import type { Pet, Vaccine, Medication } from "@/types";
+
+type Tab = "vaccines" | "medications" | "procedures";
+
+const PROCEDURE_TYPE_LABEL: Record<string, string> = {
+  consultation: "Consulta",
+  surgery: "Cirurgia",
+  exam: "Exame",
+  other: "Outro",
+};
+
+export default function PetDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
+  const router = useRouter();
+  const [pet, setPet] = useState<Pet | null>(null);
+  const [vaccines, setVaccines] = useState<Vaccine[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("vaccines");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) fetchData();
+  }, [id]);
+
+  async function fetchData() {
+    const [petRes, vaccinesRes, medsRes] = await Promise.all([
+      supabase.from("pets").select("*").eq("id", id).single(),
+      supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
+      supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
+    ]);
+
+    if (petRes.error) Alert.alert("Erro", petRes.error.message);
+    else setPet(petRes.data);
+
+    setVaccines(vaccinesRes.data ?? []);
+    setMedications(medsRes.data ?? []);
+    setLoading(false);
+  }
+
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-cream items-center justify-center">
+        <ActivityIndicator color="#7da87b" size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!pet) return null;
+
+  const SPECIES_ICON = pet.species === "dog" ? "🐶" : "🐱";
+
+  return (
+    <SafeAreaView className="flex-1 bg-cream">
+      {/* Header */}
+      <View className="px-5 pt-4 pb-2 flex-row items-center">
+        <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
+          <Ionicons name="arrow-back" size={24} color="#527558" />
+        </TouchableOpacity>
+        <Text className="text-xl font-bold text-sage-700 flex-1">{pet.name}</Text>
+        {user?.id === pet.user_id && (
+          <TouchableOpacity
+            onPress={() => router.push(`/(app)/pet/${id}/share`)}
+            className="p-1"
+          >
+            <Ionicons name="people-outline" size={22} color="#527558" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Pet info card */}
+      <View className="mx-5 bg-white rounded-2xl p-5 shadow-sm mb-4">
+        <View className="flex-row items-center">
+          {pet.photo_url ? (
+            <Image source={{ uri: pet.photo_url }} className="w-20 h-20 rounded-full bg-sage-100" />
+          ) : (
+            <View className="w-20 h-20 rounded-full bg-sage-100 items-center justify-center">
+              <Text className="text-4xl">{SPECIES_ICON}</Text>
+            </View>
+          )}
+          <View className="ml-4 flex-1">
+            <Text className="text-xl font-bold text-sage-800">{pet.name}</Text>
+            {pet.breed && <Text className="text-sage-500">{pet.breed}</Text>}
+            {pet.birth_date && (
+              <Text className="text-sage-400 text-sm mt-1">
+                {formatDateISO(pet.birth_date)} • {getAge(pet.birth_date)}
+              </Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View className="flex-row mx-5 bg-white rounded-2xl p-1 shadow-sm mb-4">
+        {(["vaccines", "medications", "procedures"] as Tab[]).map((tab) => {
+          const labels = { vaccines: "Vacinas", medications: "Medicamentos", procedures: "Procedimentos" };
+          const active = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              className={`flex-1 py-2 rounded-xl items-center ${active ? "bg-sage-400" : ""}`}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text className={`text-xs font-medium ${active ? "text-white" : "text-sage-500"}`}>
+                {labels[tab]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Tab content */}
+      <View className="flex-1 px-5">
+        {activeTab === "vaccines" && (
+          <>
+            <TouchableOpacity
+              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
+              onPress={() => router.push(`/(app)/pet/${id}/add-vaccine`)}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">Registrar vacina</Text>
+            </TouchableOpacity>
+
+            {vaccines.length === 0 ? (
+              <View className="items-center mt-8">
+                <Text className="text-sage-300 text-lg">Nenhuma vacina registrada</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={vaccines}
+                keyExtractor={(v) => v.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-1">
+                        <Text className="font-semibold text-sage-800">{item.name}</Text>
+                        {item.vet_name && (
+                          <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
+                        )}
+                      </View>
+                      <View className="items-end">
+                        <Text className="text-sage-400 text-xs">Aplicada</Text>
+                        <Text className="text-sage-600 text-sm font-medium">{formatDateISO(item.applied_at)}</Text>
+                      </View>
+                    </View>
+                    {item.next_dose_at && (
+                      <View className="mt-2 pt-2 border-t border-sage-100 flex-row items-center">
+                        <Ionicons name="calendar-outline" size={12} color="#7da87b" />
+                        <Text className="text-sage-500 text-xs ml-1">
+                          Próxima dose: {formatDateISO(item.next_dose_at)}
+                        </Text>
+                      </View>
+                    )}
+                    {item.notes && (
+                      <Text className="text-sage-400 text-xs mt-1">{item.notes}</Text>
+                    )}
+                  </View>
+                )}
+              />
+            )}
+          </>
+        )}
+
+        {activeTab === "medications" && (
+          <>
+            <TouchableOpacity
+              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
+              onPress={() => router.push(`/(app)/pet/${id}/add-medication`)}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">Registrar medicamento</Text>
+            </TouchableOpacity>
+
+            {medications.length === 0 ? (
+              <View className="items-center mt-8">
+                <Text className="text-sage-300 text-lg">Nenhum medicamento registrado</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={medications}
+                keyExtractor={(m) => m.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                    <View className="flex-row justify-between items-start">
+                      <View className="flex-1">
+                        <Text className="font-semibold text-sage-800">{item.name}</Text>
+                        {item.dose && <Text className="text-sage-500 text-sm">{item.dose}</Text>}
+                        {item.frequency && <Text className="text-sage-400 text-xs">{item.frequency}</Text>}
+                      </View>
+                      <View className={`px-2 py-1 rounded-full ${item.active ? "bg-sage-100" : "bg-gray-100"}`}>
+                        <Text className={`text-xs font-medium ${item.active ? "text-sage-600" : "text-gray-400"}`}>
+                          {item.active ? "Ativo" : "Encerrado"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="mt-2 pt-2 border-t border-sage-100 flex-row gap-4">
+                      <Text className="text-sage-400 text-xs">Início: {formatDateISO(item.started_at)}</Text>
+                      {item.ends_at && (
+                        <Text className="text-sage-400 text-xs">Fim: {formatDateISO(item.ends_at)}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </>
+        )}
+
+        {activeTab === "procedures" && (
+          <View className="items-center mt-8">
+            <Text className="text-sage-300 text-lg">Em breve</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
