@@ -10,6 +10,7 @@ import {
   FlatList,
   Platform,
   Share,
+  TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, Procedure, SymptomLog } from "@/types";
+import type { Pet, Vaccine, Medication, Procedure, SymptomLog, ChronicCondition } from "@/types";
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
 const SEVERITY_CONFIG = {
@@ -44,6 +45,10 @@ export default function PetDetailScreen() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
+  const [conditions, setConditions] = useState<ChronicCondition[]>([]);
+  const [addingCondition, setAddingCondition] = useState(false);
+  const [newConditionName, setNewConditionName] = useState("");
+  const [savingCondition, setSavingCondition] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("vaccines");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -58,12 +63,13 @@ export default function PetDetailScreen() {
   }, [id]);
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes, logsRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
       supabase.from("procedures").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
       supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
+      supabase.from("chronic_conditions").select("*").eq("pet_id", id).order("created_at"),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -73,6 +79,7 @@ export default function PetDetailScreen() {
     setMedications(medsRes.data ?? []);
     setProcedures(procsRes.data ?? []);
     setLogs(logsRes.data ?? []);
+    setConditions((condRes as any).data ?? []);
     setLoading(false);
   }
 
@@ -95,6 +102,27 @@ export default function PetDetailScreen() {
     } else {
       Share.share({ message: `Cartão de emergência de ${pet?.name}: ${url}` });
     }
+  }
+
+  async function saveCondition() {
+    if (!newConditionName.trim()) return;
+    setSavingCondition(true);
+    const { data, error } = await supabase
+      .from("chronic_conditions")
+      .insert({ pet_id: id, name: newConditionName.trim() })
+      .select()
+      .single();
+    setSavingCondition(false);
+    if (!error && data) {
+      setConditions((prev) => [...prev, data as ChronicCondition]);
+      setNewConditionName("");
+      setAddingCondition(false);
+    }
+  }
+
+  async function deleteCondition(condId: string) {
+    await supabase.from("chronic_conditions").delete().eq("id", condId);
+    setConditions((prev) => prev.filter((c) => c.id !== condId));
   }
 
   async function handleDelete() {
@@ -191,6 +219,55 @@ export default function PetDetailScreen() {
               )}
             </View>
           </View>
+        </View>
+
+        {/* Condições crônicas */}
+        <View className="mt-4 pt-4 border-t border-sage-100">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-xs font-semibold text-sage-600 uppercase tracking-wide">Condições crônicas</Text>
+            {!addingCondition && (
+              <TouchableOpacity onPress={() => setAddingCondition(true)} className="p-0.5">
+                <Ionicons name="add-circle-outline" size={18} color="#7da87b" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="flex-row flex-wrap gap-2">
+            {conditions.map((c) => (
+              <View key={c.id} className="bg-purple-50 border border-purple-100 rounded-full px-3 py-1 flex-row items-center gap-1">
+                <Text className="text-purple-700 text-xs font-medium">{c.name}</Text>
+                <TouchableOpacity onPress={() => deleteCondition(c.id)} hitSlop={8}>
+                  <Ionicons name="close-circle" size={13} color="#9333ea" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {conditions.length === 0 && !addingCondition && (
+              <Text className="text-sage-300 text-xs">Nenhuma registrada</Text>
+            )}
+          </View>
+
+          {addingCondition && (
+            <View className="flex-row items-center gap-2 mt-2">
+              <TextInput
+                className="flex-1 border border-sage-200 rounded-xl px-3 py-2 text-sage-800 bg-sage-50 text-sm"
+                placeholder="Nome da condição..."
+                placeholderTextColor="#a8c5ad"
+                value={newConditionName}
+                onChangeText={setNewConditionName}
+                onSubmitEditing={saveCondition}
+                autoFocus
+                returnKeyType="done"
+              />
+              <TouchableOpacity onPress={saveCondition} disabled={savingCondition} hitSlop={4}>
+                {savingCondition
+                  ? <ActivityIndicator size="small" color="#7da87b" />
+                  : <Ionicons name="checkmark-circle" size={28} color="#7da87b" />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setAddingCondition(false); setNewConditionName(""); }} hitSlop={4}>
+                <Ionicons name="close-circle" size={28} color="#a8c5ad" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {pet.emergency_card_enabled && (

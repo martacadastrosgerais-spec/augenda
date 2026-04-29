@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { getAge } from "@/lib/utils";
-import type { Pet, Medication, Vaccine } from "@/types";
+import type { Pet, Medication, Vaccine, ChronicCondition } from "@/types";
 
 const SPECIES_LABEL: Record<string, string> = { dog: "Cão", cat: "Gato" };
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea", unknown: "—" };
@@ -23,6 +23,7 @@ export default function EmergencyCardScreen() {
   const [pet, setPet] = useState<Pet | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
+  const [conditions, setConditions] = useState<ChronicCondition[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -31,10 +32,11 @@ export default function EmergencyCardScreen() {
   }, [petId]);
 
   async function fetchCard() {
-    const [petRes, medsRes, vacRes] = await Promise.all([
+    const [petRes, medsRes, vacRes, condRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", petId).eq("emergency_card_enabled", true).single(),
       supabase.from("medications").select("*").eq("pet_id", petId).eq("active", true).order("started_at"),
       supabase.from("vaccines").select("*").eq("pet_id", petId).order("applied_at", { ascending: false }).limit(5),
+      supabase.from("chronic_conditions").select("*").eq("pet_id", petId).order("created_at"),
     ]);
 
     if (petRes.error || !petRes.data) {
@@ -46,6 +48,7 @@ export default function EmergencyCardScreen() {
     setPet(petRes.data);
     setMedications(medsRes.data ?? []);
     setVaccines(vacRes.data ?? []);
+    setConditions(condRes.data ?? []);
     setLoading(false);
   }
 
@@ -127,6 +130,23 @@ export default function EmergencyCardScreen() {
             )}
           </View>
         </View>
+
+        {/* Condições crônicas */}
+        {conditions.length > 0 && (
+          <View className="bg-purple-50 border border-purple-100 mx-4 mt-3 rounded-2xl p-4">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="pulse-outline" size={16} color="#9333ea" />
+              <Text className="text-purple-700 font-semibold text-sm">Condições crônicas</Text>
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              {conditions.map((c) => (
+                <View key={c.id} className="bg-white border border-purple-100 rounded-full px-3 py-1">
+                  <Text className="text-purple-700 text-xs font-medium">{c.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Alergias */}
         {pet.allergies ? (

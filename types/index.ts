@@ -114,6 +114,15 @@ export interface Reminder {
   created_at: string;
 }
 
+export interface ChronicCondition {
+  id: string;
+  pet_id: string;
+  name: string;
+  diagnosed_at?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export type SymptomSeverity = "low" | "medium" | "high";
 
 export interface SymptomLog {
