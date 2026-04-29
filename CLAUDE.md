@@ -50,49 +50,90 @@ Tasks simples e bem definidas. Usar quando:
 
 > **Produto** = o que o usuário vê e usa. Decisão de negócio, afeta UX.
 > **Técnico** = infraestrutura, qualidade, segurança. Invisível ao usuário mas essencial para produção.
+>
+> Prioridades: **P0** = bloqueador / diferencial crítico · **P1** = alto valor · **P2** = melhoria · **P3** = futuro
 
 ---
 
-### 🔴 Crítico
+### P0 — Crítico / Diferencial de Produto
 
-| Tipo | Item | Status |
-|------|------|--------|
-| Técnico | T5: Error boundaries — erros derrubavam o app inteiro | ✅ |
+| Tipo | Epic | Item | Status |
+|------|------|------|--------|
+| Técnico | Infra | Error boundaries — erros derrubavam o app inteiro | ✅ |
+| Técnico | Infra | `jest-expo` compatível com Expo SDK 54 | ✅ |
+| Produto | Epic 8 | **Cartão de emergência** — perfil público acessível sem login | [ ] |
+| Produto | Epic 8 | Campos pet: sexo, microchip, castrado, alergias, condições crônicas | [ ] |
+| Produto | Epic 8 | Contatos de emergência (tutor + veterinário com telefone) | [ ] |
+| Produto | Epic 8 | URL pública do cartão (sem login) + QR code gerado no app | [ ] |
 
----
-
-### 🟠 Alto
-
-| Tipo | Item | Status |
-|------|------|--------|
-| Técnico | T3: `jest-expo` versão incompatível com Expo SDK 54 | ✅ |
-| Produto | Tela de Procedimentos (consultas, cirurgias, exames) | [ ] |
-| Produto | Tela de Perfil (nome do usuário, trocar senha) | [ ] |
+**Notas Epic 8:** EmergencyProfile entity no banco. URL: `/emergency/[petId]` pública. Exibe: nome, espécie, raça, idade, peso, condições crônicas, medicamentos ativos, veterinário, contato de emergência. Leitura sem auth via RLS policy pública.
 
 ---
 
-### 🟡 Médio
+### P1 — Alto Valor
 
-| Tipo | Item | Status |
-|------|------|--------|
-| Produto | T2: Upload de foto dos pets | [ ] |
-| Produto | Agenda/Calendário interno (próximas doses, meds ativos) | [ ] |
-| Produto | Documentos (upload de exames PDF/foto) | [ ] |
-| Produto | Notificações (lembrete vacina e medicamento) | [ ] |
-| Técnico | T4: Paginação nas listas de vacinas e medicamentos | [ ] |
-| Técnico | T6: CI/CD com GitHub Actions (rodar testes no push) | [ ] |
+| Tipo | Epic | Item | Status |
+|------|------|------|--------|
+| Produto | Epic 1 | Tela de Procedimentos (consultas, cirurgias, exames) | ✅ |
+| Produto | Epic 1 | Tela de Perfil (nome do usuário, trocar senha) | ✅ |
+| Produto | Epic 1 | Agenda/Calendário com integração calendário nativo | ✅ |
+| Produto | Epic 9 | **Dashboard "hoje"** — tarefas do dia, atrasadas, próximas 7 dias | [ ] |
+| Produto | Epic 2 | **Timeline unificada** — feed cronológico de todos os eventos de todos os pets | [ ] |
+| Produto | Epic 3 | **Lembretes com recorrência** — vacinas, medicamentos, procedimentos | [ ] |
+| Produto | Epic 3 | Push notifications (FCM/APNs) vinculados aos lembretes | [ ] |
+| Produto | Epic 4 | **Confirmação de dose** — registrar quem administrou e quando cada dose | [ ] |
+| Técnico | Infra | CI/CD com GitHub Actions (rodar testes no push) | [ ] |
+
+**Notas Epic 9 (Dashboard):** Substituir ou complementar a tela inicial. Mostra: medicamentos a dar hoje, vacinas vencidas/próximas, procedimentos agendados. Usa dados já existentes, sem novo schema.
+
+**Notas Epic 2 (Timeline):** Entidade `HealthEvent` view ou tabela materializada agregando vaccines, medications, procedures. UI: FlatList com badges por tipo, filtro por pet.
+
+**Notas Epic 3 (Lembretes):** Tabela `reminders` (pet_id, type, title, next_at, recurrence_rule, enabled). Recorrência: diária, semanal, mensal, personalizada. Integração com expo-notifications.
+
+**Notas Epic 4 (Doses):** Tabela `medication_doses` (medication_id, administered_at, administered_by, notes). UI: botão "Registrar dose" na tela do medicamento ativo. Histórico de aderência.
 
 ---
 
-### 🟢 Baixo / Futuro
+### P2 — Melhoria
 
-| Tipo | Item | Status |
-|------|------|--------|
-| Produto | OCR de carteira de vacina (Claude Vision API) | [ ] |
-| Produto | Integração com calendário nativo (iOS/Google/Android) | [ ] |
-| Técnico | T8: Push notifications (infra — FCM/APNs) | [ ] |
-| Técnico | T9: Modo offline básico | [ ] |
-| Técnico | T11: i18n para expansão além do Brasil | [ ] |
+| Tipo | Epic | Item | Status |
+|------|------|------|--------|
+| Produto | Epic 1 | Upload de foto dos pets (Supabase Storage) | [ ] |
+| Produto | Epic 6 | **Diário clínico / log de sintomas** — notas livres com data e hora | [ ] |
+| Produto | Epic 6 | Vincular sintoma a evento existente ou registro standalone | [ ] |
+| Produto | Epic 10 | **Condições crônicas** — cadastro e vinculação a meds/procedimentos | [ ] |
+| Produto | Epic 1 | Documentos — upload de exames PDF/foto | [ ] |
+| Produto | Epic 1 | OCR de carteira de vacina (Claude Vision API) | [ ] |
+| Produto | Epic 1 | Arquivar pet (sem deletar histórico) | [ ] |
+| Técnico | Infra | Paginação nas listas de vacinas e medicamentos | [ ] |
+| Técnico | Infra | Modo offline básico (cache local) | [ ] |
+
+**Notas Epic 6 (Diário):** Tabela `symptom_logs` (pet_id, noted_at, description, severity, related_event_id?). UI: botão "+" na tela do pet, similar a add-procedure.
+
+**Notas Epic 10 (Crônicas):** Tabela `chronic_conditions` (pet_id, name, diagnosed_at, notes). Exibidas no perfil do pet e no cartão de emergência. Listar nas alergias do cartão de emergência.
+
+---
+
+### P3 — Futuro
+
+| Tipo | Epic | Item | Status |
+|------|------|------|--------|
+| Produto | — | Compartilhamento social / relatório para veterinário | [ ] |
+| Técnico | Infra | i18n para expansão além do Brasil | [ ] |
+| Técnico | Infra | Analytics de uso (Posthog ou similar) | [ ] |
+
+---
+
+### Schema Pendente (novas tabelas)
+
+| Tabela | Descrição | Epic | Prioridade |
+|--------|-----------|------|------------|
+| `reminders` | Lembretes recorrentes por pet | 3 | P1 |
+| `medication_doses` | Registro de cada dose administrada | 4 | P1 |
+| `symptom_logs` | Diário clínico / sintomas | 6 | P2 |
+| `chronic_conditions` | Condições crônicas do pet | 10 | P2 |
+| `emergency_profiles` | Perfil de emergência público | 8 | P0 |
+| Campos em `pets` | sex, microchip, neutered, allergies, weight, vet_name, vet_phone, emergency_contact_name, emergency_contact_phone | 8 | P0 |
 
 ---
 

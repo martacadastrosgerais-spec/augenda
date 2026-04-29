@@ -36,6 +36,8 @@ export interface PetWithMeta extends Pet {
 
 export type ProcedureType = "consultation" | "surgery" | "exam" | "other";
 
+export type PetSex = "male" | "female" | "unknown";
+
 export interface Pet {
   id: string;
   user_id: string;
@@ -45,6 +47,15 @@ export interface Pet {
   birth_date?: string;
   photo_url?: string;
   weight_kg?: number;
+  sex?: PetSex;
+  microchip?: string;
+  neutered?: boolean;
+  allergies?: string;
+  vet_name?: string;
+  vet_phone?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_card_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

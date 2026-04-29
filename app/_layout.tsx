@@ -17,8 +17,9 @@ function RootNavigator() {
     SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === "(auth)";
+    const inEmergency = segments[0] === "emergency";
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !inEmergency) {
       router.replace("/(auth)/login");
     } else if (session && inAuthGroup) {
       router.replace("/(app)");
@@ -29,6 +30,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(app)" />
+      <Stack.Screen name="emergency" />
     </Stack>
   );
 }

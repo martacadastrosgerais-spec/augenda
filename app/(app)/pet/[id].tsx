@@ -9,6 +9,8 @@ import {
   ScrollView,
   FlatList,
   Platform,
+  Share,
+  Clipboard,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +19,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, Procedure } from "@/types";
+
+const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
 
 type Tab = "vaccines" | "medications" | "procedures";
 
@@ -65,6 +69,27 @@ export default function PetDetailScreen() {
     setLoading(false);
   }
 
+
+  function getEmergencyUrl() {
+    const base = process.env.EXPO_PUBLIC_SUPABASE_URL?.includes("supabase.co")
+      ? "https://augenda.app"
+      : "http://localhost:8081";
+    return `${base}/emergency/${id}`;
+  }
+
+  async function shareEmergencyCard() {
+    const url = getEmergencyUrl();
+    if (Platform.OS === "web") {
+      if (navigator.share) {
+        navigator.share({ title: `Cartão de emergência — ${pet?.name}`, url });
+      } else {
+        navigator.clipboard?.writeText(url);
+        alert("Link copiado!");
+      }
+    } else {
+      Share.share({ message: `Cartão de emergência de ${pet?.name}: ${url}`, url });
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -148,13 +173,32 @@ export default function PetDetailScreen() {
           <View className="ml-4 flex-1">
             <Text className="text-xl font-bold text-sage-800">{pet.name}</Text>
             {pet.breed && <Text className="text-sage-500">{pet.breed}</Text>}
-            {pet.birth_date && (
-              <Text className="text-sage-400 text-sm mt-1">
-                {formatDateISO(pet.birth_date)} • {getAge(pet.birth_date)}
-              </Text>
-            )}
+            <View className="flex-row flex-wrap gap-x-3 mt-1">
+              {pet.birth_date && (
+                <Text className="text-sage-400 text-sm">{formatDateISO(pet.birth_date)} • {getAge(pet.birth_date)}</Text>
+              )}
+              {pet.weight_kg != null && (
+                <Text className="text-sage-400 text-sm">{pet.weight_kg} kg</Text>
+              )}
+              {pet.sex && pet.sex !== "unknown" && (
+                <Text className="text-sage-400 text-sm">{SEX_LABEL[pet.sex]}{pet.neutered ? " · Castrado(a)" : ""}</Text>
+              )}
+            </View>
           </View>
         </View>
+
+        {pet.emergency_card_enabled && (
+          <TouchableOpacity
+            onPress={shareEmergencyCard}
+            className="mt-4 pt-4 border-t border-sage-100 flex-row items-center gap-2"
+          >
+            <View className="bg-red-50 rounded-full p-1">
+              <Ionicons name="medical" size={14} color="#ef4444" />
+            </View>
+            <Text className="text-red-400 text-xs font-medium flex-1">Cartão de emergência ativo</Text>
+            <Ionicons name="share-outline" size={16} color="#ef4444" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tabs */}
