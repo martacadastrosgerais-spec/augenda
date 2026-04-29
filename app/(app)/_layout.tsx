@@ -55,6 +55,7 @@ export default function AppLayout() {
       <Tabs.Screen name="pet/[id]/add-procedure" options={{ href: null }} />
       <Tabs.Screen name="join" options={{ href: null }} />
       <Tabs.Screen name="reminders/new" options={{ href: null }} />
+      <Tabs.Screen name="pet/[id]/add-log" options={{ href: null }} />
     </Tabs>
   );
 }

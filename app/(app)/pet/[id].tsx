@@ -17,11 +17,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, Procedure } from "@/types";
+import type { Pet, Vaccine, Medication, Procedure, SymptomLog } from "@/types";
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
+const SEVERITY_CONFIG = {
+  low:    { label: "Normal",  color: "bg-sage-100",  textColor: "text-sage-600" },
+  medium: { label: "Atenção", color: "bg-amber-100", textColor: "text-amber-600" },
+  high:   { label: "Urgente", color: "bg-red-100",   textColor: "text-red-600" },
+} as const;
 
-type Tab = "vaccines" | "medications" | "procedures";
+type Tab = "vaccines" | "medications" | "procedures" | "logs";
 
 const PROCEDURE_TYPE_LABEL: Record<string, string> = {
   consultation: "Consulta",
@@ -38,6 +43,7 @@ export default function PetDetailScreen() {
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("vaccines");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -52,11 +58,12 @@ export default function PetDetailScreen() {
   }, [id]);
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
       supabase.from("procedures").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
+      supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -65,6 +72,7 @@ export default function PetDetailScreen() {
     setVaccines(vaccinesRes.data ?? []);
     setMedications(medsRes.data ?? []);
     setProcedures(procsRes.data ?? []);
+    setLogs(logsRes.data ?? []);
     setLoading(false);
   }
 
@@ -201,8 +209,8 @@ export default function PetDetailScreen() {
 
       {/* Tabs */}
       <View className="flex-row mx-5 bg-white rounded-2xl p-1 shadow-sm mb-4">
-        {(["vaccines", "medications", "procedures"] as Tab[]).map((tab) => {
-          const labels = { vaccines: "Vacinas", medications: "Medicamentos", procedures: "Procedimentos" };
+        {(["vaccines", "medications", "procedures", "logs"] as Tab[]).map((tab) => {
+          const labels = { vaccines: "Vacinas", medications: "Medicam.", procedures: "Proced.", logs: "Diário" };
           const active = activeTab === tab;
           return (
             <TouchableOpacity
@@ -363,6 +371,50 @@ export default function PetDetailScreen() {
                     )}
                   </View>
                 )}
+              />
+            )}
+          </>
+        )}
+
+        {activeTab === "logs" && (
+          <>
+            <TouchableOpacity
+              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
+              onPress={() => router.push(`/(app)/pet/${id}/add-log` as any)}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">Nova anotação</Text>
+            </TouchableOpacity>
+
+            {logs.length === 0 ? (
+              <View className="items-center mt-8">
+                <Text className="text-sage-300 text-lg">Nenhuma anotação registrada</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={logs}
+                keyExtractor={(l) => l.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const sev = SEVERITY_CONFIG[item.severity];
+                  const d = new Date(item.noted_at);
+                  const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  return (
+                    <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                      <View className="flex-row items-start justify-between mb-2">
+                        <View className={`${sev.color} px-2 py-0.5 rounded-full`}>
+                          <Text className={`${sev.textColor} text-xs font-medium`}>{sev.label}</Text>
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
+                          <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                        </View>
+                      </View>
+                      <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
+                    </View>
+                  );
+                }}
               />
             )}
           </>

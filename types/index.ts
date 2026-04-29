@@ -114,6 +114,19 @@ export interface Reminder {
   created_at: string;
 }
 
+export type SymptomSeverity = "low" | "medium" | "high";
+
+export interface SymptomLog {
+  id: string;
+  pet_id: string;
+  noted_at: string;
+  description: string;
+  severity: SymptomSeverity;
+  related_event_type?: "vaccine" | "medication" | "procedure";
+  related_event_id?: string;
+  created_at: string;
+}
+
 export interface Attachment {
   id: string;
   procedure_id: string;
