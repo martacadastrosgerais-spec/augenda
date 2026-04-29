@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
@@ -28,10 +28,12 @@ export default function PetsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) fetchPets();
-    else setLoading(false);
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user) fetchPets();
+      else setLoading(false);
+    }, [user])
+  );
 
   async function fetchPets() {
     if (!user) return;

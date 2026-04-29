@@ -37,9 +37,14 @@ export default function PetDetailScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("vaccines");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (id) fetchData();
+    if (id) {
+      setDeleting(false);
+      setConfirmDelete(false);
+      fetchData();
+    }
   }, [id]);
 
   async function fetchData() {
@@ -59,26 +64,14 @@ export default function PetDetailScreen() {
 
 
   async function handleDelete() {
-    const doDelete = async () => {
-      setDeleting(true);
-      await supabase.from("pets").delete().eq("id", id);
-      router.replace("/(app)");
-    };
-
-    if (Platform.OS === "web") {
-      if (window.confirm(`Deletar ${pet?.name}? Esta ação não pode ser desfeita.`)) {
-        await doDelete();
-      }
-    } else {
-      Alert.alert(
-        "Deletar pet",
-        `Deletar ${pet?.name}? Esta ação não pode ser desfeita.`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Deletar", style: "destructive", onPress: doDelete },
-        ]
-      );
+    setDeleting(true);
+    const { error: delError } = await supabase.from("pets").delete().eq("id", id);
+    if (delError) {
+      setDeleting(false);
+      setConfirmDelete(false);
+      return;
     }
+    router.replace("/(app)");
   }
 
   if (loading) {
@@ -102,18 +95,39 @@ export default function PetDetailScreen() {
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700 flex-1">{pet.name}</Text>
         {user?.id === pet.user_id && (
-          <View className="flex-row gap-1">
-            <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
-              <Ionicons name="create-outline" size={22} color="#527558" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} disabled={deleting} className="p-1">
-              {deleting
-                ? <ActivityIndicator size="small" color="#ef4444" />
-                : <Ionicons name="trash-outline" size={22} color="#ef4444" />}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
-              <Ionicons name="people-outline" size={22} color="#527558" />
-            </TouchableOpacity>
+          <View className="flex-row items-center gap-1">
+            {confirmDelete ? (
+              <>
+                <Text className="text-sage-500 text-xs mr-1">Deletar?</Text>
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  disabled={deleting}
+                  className="bg-red-500 rounded-lg px-3 py-1"
+                >
+                  {deleting
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text className="text-white text-xs font-semibold">Sim</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setConfirmDelete(false)}
+                  className="border border-sage-300 rounded-lg px-3 py-1"
+                >
+                  <Text className="text-sage-600 text-xs font-semibold">Não</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
+                  <Ionicons name="create-outline" size={22} color="#527558" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1">
+                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
+                  <Ionicons name="people-outline" size={22} color="#527558" />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
       </View>
