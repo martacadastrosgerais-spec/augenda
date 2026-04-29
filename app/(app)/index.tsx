@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { FormError } from "@/components/FormError";
-import { getAge } from "@/lib/utils";
+import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet } from "@/types";
 
 const SPECIES_LABEL: Record<string, string> = { dog: "Cachorro", cat: "Gato" };
@@ -21,58 +22,126 @@ const SPECIES_ICON: Record<string, string> = { dog: "🐶", cat: "🐱" };
 
 type PetListItem = Pet & { isOwner: boolean };
 
+interface AlertItem {
+  id: string;
+  petName: string;
+  title: string;
+  date: string;
+  urgency: "overdue" | "today" | "soon";
+}
+
 export default function PetsScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [pets, setPets] = useState<PetListItem[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) fetchPets();
+      if (user) fetchAll();
       else setLoading(false);
     }, [user])
   );
 
-  async function fetchPets() {
+  async function fetchAll() {
     if (!user) return;
     setError(null);
+    await Promise.all([fetchPets(), fetchAlerts()]);
+    setLoading(false);
+  }
 
-    // Pets onde é dono
-    const { data: owned, error: ownedError } = await supabase
-      .from("pets")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+  async function fetchPets() {
+    const [ownedRes, memberRes] = await Promise.all([
+      supabase.from("pets").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
+      supabase.from("pet_members").select("pet_id, pets(*)").eq("user_id", user!.id),
+    ]);
 
-    // Pets onde é membro
-    const { data: memberships, error: memberError } = await supabase
-      .from("pet_members")
-      .select("pet_id, pets(*)")
-      .eq("user_id", user.id);
-
-    if (ownedError || memberError) {
-      console.error("[fetchPets] ownedError:", ownedError);
-      console.error("[fetchPets] memberError:", memberError);
+    if (ownedRes.error || memberRes.error) {
       setError("Não foi possível carregar os pets.");
-      setLoading(false);
       return;
     }
 
-    const ownedList: PetListItem[] = (owned ?? []).map((p) => ({ ...p, isOwner: true }));
-
-    const memberList: PetListItem[] = (memberships ?? [])
+    const ownedList: PetListItem[] = (ownedRes.data ?? []).map((p) => ({ ...p, isOwner: true }));
+    const memberList: PetListItem[] = (memberRes.data ?? [])
       .map((m: any) => m.pets)
       .filter(Boolean)
       .map((p: Pet) => ({ ...p, isOwner: false }));
 
-    // Remove duplicatas (caso improvável)
     const ownedIds = new Set(ownedList.map((p) => p.id));
-    const combined = [...ownedList, ...memberList.filter((p) => !ownedIds.has(p.id))];
+    setPets([...ownedList, ...memberList.filter((p) => !ownedIds.has(p.id))]);
+  }
 
-    setPets(combined);
-    setLoading(false);
+  async function fetchAlerts() {
+    // Monta mapa de petId → nome
+    const [ownedRes, memberRes] = await Promise.all([
+      supabase.from("pets").select("id, name").eq("user_id", user!.id),
+      supabase.from("pet_members").select("pet_id, pets(id, name)").eq("user_id", user!.id),
+    ]);
+
+    const petMap: Record<string, string> = {};
+    (ownedRes.data ?? []).forEach((p) => { petMap[p.id] = p.name; });
+    (memberRes.data ?? []).forEach((m: any) => { if (m.pets) petMap[m.pets.id] = m.pets.name; });
+
+    const petIds = Object.keys(petMap);
+    if (petIds.length === 0) { setAlerts([]); return; }
+
+    const today = new Date().toISOString().split("T")[0];
+    const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+
+    const [vacRes, medRes, procRes] = await Promise.all([
+      supabase.from("vaccines").select("id, pet_id, name, next_dose_at")
+        .in("pet_id", petIds).not("next_dose_at", "is", null).lte("next_dose_at", in7days),
+      supabase.from("medications").select("id, pet_id, name, ends_at")
+        .in("pet_id", petIds).eq("active", true).not("ends_at", "is", null).lte("ends_at", in7days),
+      supabase.from("procedures").select("id, pet_id, title, performed_at")
+        .in("pet_id", petIds).gte("performed_at", today).lte("performed_at", in7days),
+    ]);
+
+    const items: AlertItem[] = [];
+
+    (vacRes.data ?? []).forEach((v) => {
+      const d = v.next_dose_at!;
+      items.push({
+        id: `vac-${v.id}`,
+        petName: petMap[v.pet_id],
+        title: `Vacina: ${v.name}`,
+        date: d,
+        urgency: d < today ? "overdue" : d === today ? "today" : "soon",
+      });
+    });
+
+    (medRes.data ?? []).forEach((m) => {
+      const d = m.ends_at!;
+      items.push({
+        id: `med-${m.id}`,
+        petName: petMap[m.pet_id],
+        title: `Fim do tratamento: ${m.name}`,
+        date: d,
+        urgency: d < today ? "overdue" : d === today ? "today" : "soon",
+      });
+    });
+
+    (procRes.data ?? []).forEach((p) => {
+      const d = p.performed_at;
+      items.push({
+        id: `proc-${p.id}`,
+        petName: petMap[p.pet_id],
+        title: p.title,
+        date: d,
+        urgency: d === today ? "today" : "soon",
+      });
+    });
+
+    // Ordena: vencidos primeiro, depois hoje, depois por data
+    items.sort((a, b) => {
+      const order = { overdue: 0, today: 1, soon: 2 };
+      if (order[a.urgency] !== order[b.urgency]) return order[a.urgency] - order[b.urgency];
+      return a.date.localeCompare(b.date);
+    });
+
+    setAlerts(items);
   }
 
   if (loading) {
@@ -82,6 +151,11 @@ export default function PetsScreen() {
       </SafeAreaView>
     );
   }
+
+  const overdue = alerts.filter((a) => a.urgency === "overdue");
+  const today = alerts.filter((a) => a.urgency === "today");
+  const soon = alerts.filter((a) => a.urgency === "soon");
+  const hasAlerts = alerts.length > 0;
 
   return (
     <SafeAreaView className="flex-1 bg-cream">
@@ -105,6 +179,74 @@ export default function PetsScreen() {
 
       <FormError message={error} />
 
+      {/* Dashboard de alertas */}
+      {hasAlerts && (
+        <View className="mb-2">
+          {/* Contadores */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }} className="mb-3">
+            {overdue.length > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push("/(app)/calendar")}
+                className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                <View>
+                  <Text className="text-red-600 font-bold text-sm">{overdue.length} atrasado{overdue.length > 1 ? "s" : ""}</Text>
+                  <Text className="text-red-400 text-xs">Atenção necessária</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {today.length > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push("/(app)/calendar")}
+                className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="today-outline" size={18} color="#d97706" />
+                <View>
+                  <Text className="text-amber-700 font-bold text-sm">{today.length} hoje</Text>
+                  <Text className="text-amber-500 text-xs">Neste momento</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {soon.length > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push("/(app)/calendar")}
+                className="bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="calendar-outline" size={18} color="#7da87b" />
+                <View>
+                  <Text className="text-sage-600 font-bold text-sm">{soon.length} em breve</Text>
+                  <Text className="text-sage-400 text-xs">Próximos 7 dias</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+
+          {/* Itens urgentes (vencidos + hoje) */}
+          {[...overdue, ...today].length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+              {[...overdue, ...today].map((item) => {
+                const isOverdue = item.urgency === "overdue";
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => router.push("/(app)/calendar")}
+                    className={`rounded-2xl p-4 min-w-48 ${isOverdue ? "bg-red-500" : "bg-amber-400"}`}
+                  >
+                    <Text className="text-white text-xs font-medium mb-1 opacity-90">{item.petName}</Text>
+                    <Text className="text-white font-semibold text-sm leading-tight">{item.title}</Text>
+                    <Text className={`text-xs mt-2 ${isOverdue ? "text-red-100" : "text-amber-100"}`}>
+                      {isOverdue ? `Venceu em ${formatDateISO(item.date)}` : "Hoje"}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
+      {/* Lista de pets */}
       {pets.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-5xl mb-4">🐾</Text>
