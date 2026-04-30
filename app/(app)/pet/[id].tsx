@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   TextInput,
   Linking,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
@@ -71,13 +71,15 @@ export default function PetDetailScreen() {
   const [mlResults, setMlResults] = useState<MlProduct[]>([]);
   const [mlLoading, setMlLoading] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      setDeleting(false);
-      setConfirmDelete(false);
-      fetchData();
-    }
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        setDeleting(false);
+        setConfirmDelete(false);
+        fetchData();
+      }
+    }, [id])
+  );
 
   async function fetchData() {
     const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes] = await Promise.all([
