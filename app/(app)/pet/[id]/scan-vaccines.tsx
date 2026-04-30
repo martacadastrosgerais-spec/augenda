@@ -444,6 +444,13 @@ export default function ScanVaccinesScreen() {
                 Salvar {selectedCount} vacina{selectedCount !== 1 ? "s" : ""}
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              className="rounded-2xl py-4 items-center mt-2 border border-sage-200"
+              onPress={() => router.replace(`/(app)/pet/${id}` as any)}
+            >
+              <Text className="text-sage-500 font-medium text-base">Descartar leitura</Text>
+            </TouchableOpacity>
           </View>
         )}
 
