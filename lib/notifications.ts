@@ -1,5 +1,7 @@
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { supabase } from "./supabase";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -77,6 +79,27 @@ export async function cancelLocalReminder(localId: string): Promise<void> {
   if (Platform.OS === "web" || !localId) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(localId);
+  } catch {}
+}
+
+export async function registerPushToken(userId: string): Promise<void> {
+  if (Platform.OS === "web") return;
+
+  const hasPermission = await requestNotificationPermissions();
+  if (!hasPermission) return;
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  if (!projectId) return;
+
+  try {
+    const { data: tokenData } = await Notifications.getExpoPushTokenAsync({ projectId });
+    const token = tokenData;
+    if (!token) return;
+
+    await supabase.from("push_tokens").upsert(
+      { user_id: userId, token, platform: Platform.OS as "ios" | "android" },
+      { onConflict: "user_id,token" }
+    );
   } catch {}
 }
 

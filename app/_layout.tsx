@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { registerPushToken } from "@/lib/notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +24,10 @@ function RootNavigator() {
       router.replace("/(auth)/login");
     } else if (session && inAuthGroup) {
       router.replace("/(app)");
+    }
+
+    if (session?.user?.id) {
+      registerPushToken(session.user.id);
     }
   }, [session, loading, segments]);
 

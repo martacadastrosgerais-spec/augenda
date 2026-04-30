@@ -41,6 +41,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "configure-via-eas-init"
+      }
     }
   }
 }
