@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  FlatList,
   Modal,
   Platform,
   Share,
@@ -162,6 +161,7 @@ export default function PetDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-cream">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
@@ -330,7 +330,7 @@ export default function PetDetailScreen() {
       </View>
 
       {/* Tab content */}
-      <View className="flex-1 px-5">
+      <View className="px-5 pb-8">
         {activeTab === "vaccines" && (
           <>
             <TouchableOpacity
@@ -346,38 +346,33 @@ export default function PetDetailScreen() {
                 <Text className="text-sage-300 text-lg">Nenhuma vacina registrada</Text>
               </View>
             ) : (
-              <FlatList
-                data={vaccines}
-                keyExtractor={(v) => v.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                    <View className="flex-row items-start justify-between">
-                      <View className="flex-1">
-                        <Text className="font-semibold text-sage-800">{item.name}</Text>
-                        {item.vet_name && (
-                          <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
-                        )}
-                      </View>
-                      <View className="items-end">
-                        <Text className="text-sage-400 text-xs">Aplicada</Text>
-                        <Text className="text-sage-600 text-sm font-medium">{formatDateISO(item.applied_at)}</Text>
-                      </View>
+              vaccines.map((item) => (
+                <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1">
+                      <Text className="font-semibold text-sage-800">{item.name}</Text>
+                      {item.vet_name && (
+                        <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
+                      )}
                     </View>
-                    {item.next_dose_at && (
-                      <View className="mt-2 pt-2 border-t border-sage-100 flex-row items-center">
-                        <Ionicons name="calendar-outline" size={12} color="#7da87b" />
-                        <Text className="text-sage-500 text-xs ml-1">
-                          Próxima dose: {formatDateISO(item.next_dose_at)}
-                        </Text>
-                      </View>
-                    )}
-                    {item.notes && (
-                      <Text className="text-sage-400 text-xs mt-1">{item.notes}</Text>
-                    )}
+                    <View className="items-end">
+                      <Text className="text-sage-400 text-xs">Aplicada</Text>
+                      <Text className="text-sage-600 text-sm font-medium">{formatDateISO(item.applied_at)}</Text>
+                    </View>
                   </View>
-                )}
-              />
+                  {item.next_dose_at && (
+                    <View className="mt-2 pt-2 border-t border-sage-100 flex-row items-center">
+                      <Ionicons name="calendar-outline" size={12} color="#7da87b" />
+                      <Text className="text-sage-500 text-xs ml-1">
+                        Próxima dose: {formatDateISO(item.next_dose_at)}
+                      </Text>
+                    </View>
+                  )}
+                  {item.notes && (
+                    <Text className="text-sage-400 text-xs mt-1">{item.notes}</Text>
+                  )}
+                </View>
+              ))
             )}
           </>
         )}
@@ -397,53 +392,48 @@ export default function PetDetailScreen() {
                 <Text className="text-sage-300 text-lg">Nenhum medicamento registrado</Text>
               </View>
             ) : (
-              <FlatList
-                data={medications}
-                keyExtractor={(m) => m.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                    <View className="flex-row justify-between items-start">
-                      <View className="flex-1">
-                        <Text className="font-semibold text-sage-800">{item.name}</Text>
-                        {item.dose && <Text className="text-sage-500 text-sm">{item.dose}</Text>}
-                        {item.frequency && <Text className="text-sage-400 text-xs">{item.frequency}</Text>}
-                      </View>
-                      <View className={`px-2 py-1 rounded-full ${item.active ? "bg-sage-100" : "bg-gray-100"}`}>
-                        <Text className={`text-xs font-medium ${item.active ? "text-sage-600" : "text-gray-400"}`}>
-                          {item.active ? "Ativo" : "Encerrado"}
-                        </Text>
-                      </View>
+              medications.map((item) => (
+                <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                  <View className="flex-row justify-between items-start">
+                    <View className="flex-1">
+                      <Text className="font-semibold text-sage-800">{item.name}</Text>
+                      {item.dose && <Text className="text-sage-500 text-sm">{item.dose}</Text>}
+                      {item.frequency && <Text className="text-sage-400 text-xs">{item.frequency}</Text>}
                     </View>
-                    <View className="mt-2 pt-2 border-t border-sage-100 flex-row gap-4">
-                      <Text className="text-sage-400 text-xs">Início: {formatDateISO(item.started_at)}</Text>
-                      {item.ends_at && (
-                        <Text className="text-sage-400 text-xs">Fim: {formatDateISO(item.ends_at)}</Text>
-                      )}
+                    <View className={`px-2 py-1 rounded-full ${item.active ? "bg-sage-100" : "bg-gray-100"}`}>
+                      <Text className={`text-xs font-medium ${item.active ? "text-sage-600" : "text-gray-400"}`}>
+                        {item.active ? "Ativo" : "Encerrado"}
+                      </Text>
                     </View>
-                    {lastDoses[item.id] && (
-                      <View className="mt-1 flex-row items-center gap-1">
-                        <Ionicons name="checkmark-circle-outline" size={12} color="#7da87b" />
-                        <Text className="text-sage-400 text-xs">
-                          Última dose: {formatDateISO(lastDoses[item.id])}
-                        </Text>
-                      </View>
-                    )}
-                    {item.active && (
-                      <TouchableOpacity
-                        onPress={() => router.push({
-                          pathname: `/(app)/pet/${id}/add-dose` as any,
-                          params: { medicationId: item.id, medicationName: item.name },
-                        })}
-                        className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
-                      >
-                        <Ionicons name="add-circle-outline" size={14} color="#527558" />
-                        <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
-                      </TouchableOpacity>
+                  </View>
+                  <View className="mt-2 pt-2 border-t border-sage-100 flex-row gap-4">
+                    <Text className="text-sage-400 text-xs">Início: {formatDateISO(item.started_at)}</Text>
+                    {item.ends_at && (
+                      <Text className="text-sage-400 text-xs">Fim: {formatDateISO(item.ends_at)}</Text>
                     )}
                   </View>
-                )}
-              />
+                  {lastDoses[item.id] && (
+                    <View className="mt-1 flex-row items-center gap-1">
+                      <Ionicons name="checkmark-circle-outline" size={12} color="#7da87b" />
+                      <Text className="text-sage-400 text-xs">
+                        Última dose: {formatDateISO(lastDoses[item.id])}
+                      </Text>
+                    </View>
+                  )}
+                  {item.active && (
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: `/(app)/pet/${id}/add-dose` as any,
+                        params: { medicationId: item.id, medicationName: item.name },
+                      })}
+                      className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                    >
+                      <Ionicons name="add-circle-outline" size={14} color="#527558" />
+                      <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
             )}
           </>
         )}
@@ -463,38 +453,33 @@ export default function PetDetailScreen() {
                 <Text className="text-sage-300 text-lg">Nenhum procedimento registrado</Text>
               </View>
             ) : (
-              <FlatList
-                data={procedures}
-                keyExtractor={(p) => p.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                    <View className="flex-row items-start justify-between">
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-2 mb-0.5">
-                          <View className="bg-sage-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-sage-600 text-xs font-medium">
-                              {PROCEDURE_TYPE_LABEL[item.type]}
-                            </Text>
-                          </View>
+              procedures.map((item) => (
+                <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1">
+                      <View className="flex-row items-center gap-2 mb-0.5">
+                        <View className="bg-sage-100 px-2 py-0.5 rounded-full">
+                          <Text className="text-sage-600 text-xs font-medium">
+                            {PROCEDURE_TYPE_LABEL[item.type]}
+                          </Text>
                         </View>
-                        <Text className="font-semibold text-sage-800">{item.title}</Text>
-                        {item.vet_name && (
-                          <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
-                        )}
                       </View>
-                      <Text className="text-sage-600 text-sm font-medium">
-                        {formatDateISO(item.performed_at)}
-                      </Text>
+                      <Text className="font-semibold text-sage-800">{item.title}</Text>
+                      {item.vet_name && (
+                        <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
+                      )}
                     </View>
-                    {item.description && (
-                      <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
-                        {item.description}
-                      </Text>
-                    )}
+                    <Text className="text-sage-600 text-sm font-medium">
+                      {formatDateISO(item.performed_at)}
+                    </Text>
                   </View>
-                )}
-              />
+                  {item.description && (
+                    <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
+                      {item.description}
+                    </Text>
+                  )}
+                </View>
+              ))
             )}
           </>
         )}
@@ -514,35 +499,32 @@ export default function PetDetailScreen() {
                 <Text className="text-sage-300 text-lg">Nenhuma anotação registrada</Text>
               </View>
             ) : (
-              <FlatList
-                data={logs}
-                keyExtractor={(l) => l.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => {
-                  const sev = SEVERITY_CONFIG[item.severity];
-                  const d = new Date(item.noted_at);
-                  const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                  return (
-                    <View className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                      <View className="flex-row items-start justify-between mb-2">
-                        <View className={`${sev.color} px-2 py-0.5 rounded-full`}>
-                          <Text className={`${sev.textColor} text-xs font-medium`}>{sev.label}</Text>
-                        </View>
-                        <View className="items-end">
-                          <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
-                          <Text className="text-sage-400 text-xs">{timeStr}</Text>
-                        </View>
+              logs.map((item) => {
+                const sev = SEVERITY_CONFIG[item.severity];
+                const d = new Date(item.noted_at);
+                const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                return (
+                  <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                    <View className="flex-row items-start justify-between mb-2">
+                      <View className={`${sev.color} px-2 py-0.5 rounded-full`}>
+                        <Text className={`${sev.textColor} text-xs font-medium`}>{sev.label}</Text>
                       </View>
-                      <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
+                      <View className="items-end">
+                        <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
+                        <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                      </View>
                     </View>
-                  );
-                }}
-              />
+                    <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
+                  </View>
+                );
+              })
             )}
           </>
         )}
       </View>
+
+      </ScrollView>
 
       {/* QR Code modal */}
       <Modal
