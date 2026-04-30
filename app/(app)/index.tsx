@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -25,9 +25,39 @@ type PetListItem = Pet & { isOwner: boolean };
 interface AlertItem {
   id: string;
   petName: string;
+  petId: string;
   title: string;
   date: string;
   urgency: "overdue" | "today" | "soon";
+  type: "vaccine" | "medication" | "procedure" | "reminder";
+}
+
+const TYPE_ICON: Record<string, string> = {
+  vaccine: "shield-checkmark-outline",
+  medication: "medkit-outline",
+  procedure: "calendar-outline",
+  reminder: "notifications-outline",
+};
+const TYPE_LABEL: Record<string, string> = {
+  vaccine: "Vacina",
+  medication: "Medicamento",
+  procedure: "Procedimento",
+  reminder: "Lembrete",
+};
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+function formatTodayLabel() {
+  return new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }
 
 export default function PetsScreen() {
@@ -37,6 +67,7 @@ export default function PetsScreen() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -48,8 +79,19 @@ export default function PetsScreen() {
   async function fetchAll() {
     if (!user) return;
     setError(null);
-    await Promise.all([fetchPets(), fetchAlerts()]);
+    await Promise.all([fetchPets(), fetchAlerts(), fetchUserName()]);
     setLoading(false);
+  }
+
+  async function fetchUserName() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", user!.id)
+      .single();
+    if (data?.email) {
+      setUserName(data.email.split("@")[0].split(".")[0]);
+    }
   }
 
   async function fetchPets() {
@@ -74,7 +116,6 @@ export default function PetsScreen() {
   }
 
   async function fetchAlerts() {
-    // Monta mapa de petId → nome
     const [ownedRes, memberRes] = await Promise.all([
       supabase.from("pets").select("id, name").eq("user_id", user!.id),
       supabase.from("pet_members").select("pet_id, pets(id, name)").eq("user_id", user!.id),
@@ -90,51 +131,40 @@ export default function PetsScreen() {
     const today = new Date().toISOString().split("T")[0];
     const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
 
-    const [vacRes, medRes, procRes] = await Promise.all([
+    const [vacRes, medRes, procRes, remRes] = await Promise.all([
       supabase.from("vaccines").select("id, pet_id, name, next_dose_at")
         .in("pet_id", petIds).not("next_dose_at", "is", null).lte("next_dose_at", in7days),
       supabase.from("medications").select("id, pet_id, name, ends_at")
         .in("pet_id", petIds).eq("active", true).not("ends_at", "is", null).lte("ends_at", in7days),
       supabase.from("procedures").select("id, pet_id, title, performed_at")
         .in("pet_id", petIds).gte("performed_at", today).lte("performed_at", in7days),
+      supabase.from("reminders").select("id, pet_id, title, scheduled_date, type")
+        .in("pet_id", petIds).eq("scheduled_date", today).eq("enabled", true),
     ]);
 
     const items: AlertItem[] = [];
 
     (vacRes.data ?? []).forEach((v) => {
       const d = v.next_dose_at!;
-      items.push({
-        id: `vac-${v.id}`,
-        petName: petMap[v.pet_id],
-        title: `Vacina: ${v.name}`,
-        date: d,
-        urgency: d < today ? "overdue" : d === today ? "today" : "soon",
-      });
+      items.push({ id: `vac-${v.id}`, petName: petMap[v.pet_id], petId: v.pet_id, title: `Vacina: ${v.name}`, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "vaccine" });
     });
 
     (medRes.data ?? []).forEach((m) => {
       const d = m.ends_at!;
-      items.push({
-        id: `med-${m.id}`,
-        petName: petMap[m.pet_id],
-        title: `Fim do tratamento: ${m.name}`,
-        date: d,
-        urgency: d < today ? "overdue" : d === today ? "today" : "soon",
-      });
+      items.push({ id: `med-${m.id}`, petName: petMap[m.pet_id], petId: m.pet_id, title: `Fim: ${m.name}`, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "medication" });
     });
 
     (procRes.data ?? []).forEach((p) => {
       const d = p.performed_at;
-      items.push({
-        id: `proc-${p.id}`,
-        petName: petMap[p.pet_id],
-        title: p.title,
-        date: d,
-        urgency: d === today ? "today" : "soon",
-      });
+      items.push({ id: `proc-${p.id}`, petName: petMap[p.pet_id], petId: p.pet_id, title: p.title, date: d, urgency: d === today ? "today" : "soon", type: "procedure" });
     });
 
-    // Ordena: vencidos primeiro, depois hoje, depois por data
+    (remRes.data ?? []).forEach((r) => {
+      if (!items.find((i) => i.id === `rem-${r.id}`)) {
+        items.push({ id: `rem-${r.id}`, petName: petMap[r.pet_id], petId: r.pet_id, title: r.title, date: today, urgency: "today", type: "reminder" });
+      }
+    });
+
     items.sort((a, b) => {
       const order = { overdue: 0, today: 1, soon: 2 };
       if (order[a.urgency] !== order[b.urgency]) return order[a.urgency] - order[b.urgency];
@@ -153,122 +183,153 @@ export default function PetsScreen() {
   }
 
   const overdue = alerts.filter((a) => a.urgency === "overdue");
-  const today = alerts.filter((a) => a.urgency === "today");
+  const todayAlerts = alerts.filter((a) => a.urgency === "today");
   const soon = alerts.filter((a) => a.urgency === "soon");
-  const hasAlerts = alerts.length > 0;
 
   return (
     <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
-      {/* Header verde escuro */}
-      <View className="bg-sage-700 px-5 pt-4 pb-5 flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-white">Meus Pets</Text>
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            className="border border-sage-500 rounded-full w-10 h-10 items-center justify-center"
-            onPress={() => router.push("/(app)/join")}
-          >
-            <Ionicons name="enter-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
-            onPress={() => router.push("/(app)/pet/new")}
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </TouchableOpacity>
+      {/* Header */}
+      <View className="bg-sage-700 px-5 pt-4 pb-5">
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="text-white/70 text-sm capitalize">{formatTodayLabel()}</Text>
+            <Text className="text-white text-2xl font-bold mt-0.5">
+              {getGreeting()}{userName ? `, ${userName}` : ""} 👋
+            </Text>
+          </View>
+          <View className="flex-row gap-2 mt-1">
+            <TouchableOpacity
+              className="border border-sage-500 rounded-full w-10 h-10 items-center justify-center"
+              onPress={() => router.push("/(app)/join")}
+            >
+              <Ionicons name="enter-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
+              onPress={() => router.push("/(app)/pet/new")}
+            >
+              <Ionicons name="add" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Stats pills */}
+        <View className="flex-row gap-2 mt-4">
+          <View className="bg-white/10 rounded-full px-3 py-1.5 flex-row items-center gap-1.5">
+            <Ionicons name="paw" size={13} color="#fff" />
+            <Text className="text-white text-xs font-semibold">{pets.length} pet{pets.length !== 1 ? "s" : ""}</Text>
+          </View>
+          {overdue.length > 0 && (
+            <TouchableOpacity
+              className="bg-red-500 rounded-full px-3 py-1.5 flex-row items-center gap-1.5"
+              onPress={() => router.push("/(app)/calendar")}
+            >
+              <Ionicons name="alert-circle" size={13} color="#fff" />
+              <Text className="text-white text-xs font-semibold">{overdue.length} atrasado{overdue.length !== 1 ? "s" : ""}</Text>
+            </TouchableOpacity>
+          )}
+          {todayAlerts.length > 0 && (
+            <TouchableOpacity
+              className="bg-amber-500 rounded-full px-3 py-1.5 flex-row items-center gap-1.5"
+              onPress={() => router.push("/(app)/calendar")}
+            >
+              <Ionicons name="today-outline" size={13} color="#fff" />
+              <Text className="text-white text-xs font-semibold">{todayAlerts.length} hoje</Text>
+            </TouchableOpacity>
+          )}
+          {soon.length > 0 && (
+            <TouchableOpacity
+              className="bg-white/20 rounded-full px-3 py-1.5 flex-row items-center gap-1.5"
+              onPress={() => router.push("/(app)/calendar")}
+            >
+              <Ionicons name="calendar-outline" size={13} color="#fff" />
+              <Text className="text-white text-xs font-semibold">{soon.length} em breve</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Conteúdo com fundo claro arredondado */}
+      {/* Conteúdo claro arredondado */}
       <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
         <FormError message={error} />
 
         <FlatList
           data={pets}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, paddingTop: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            hasAlerts ? (
-              <View className="mb-3">
-                {/* Contadores */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }} className="mb-3">
-                  {overdue.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => router.push("/(app)/calendar")}
-                      className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-                    >
-                      <Ionicons name="alert-circle" size={18} color="#ef4444" />
-                      <View>
-                        <Text className="text-red-600 font-bold text-sm">{overdue.length} atrasado{overdue.length > 1 ? "s" : ""}</Text>
-                        <Text className="text-red-400 text-xs">Atenção necessária</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  {today.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => router.push("/(app)/calendar")}
-                      className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-                    >
-                      <Ionicons name="today-outline" size={18} color="#d97706" />
-                      <View>
-                        <Text className="text-amber-700 font-bold text-sm">{today.length} hoje</Text>
-                        <Text className="text-amber-500 text-xs">Neste momento</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  {soon.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => router.push("/(app)/calendar")}
-                      className="bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-                    >
-                      <Ionicons name="calendar-outline" size={18} color="#32a060" />
-                      <View>
-                        <Text className="text-sage-600 font-bold text-sm">{soon.length} em breve</Text>
-                        <Text className="text-sage-400 text-xs">Próximos 7 dias</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                </ScrollView>
-
-                {/* Itens urgentes */}
-                {[...overdue, ...today].length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                    {[...overdue, ...today].map((item) => {
-                      const isOverdue = item.urgency === "overdue";
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          onPress={() => router.push("/(app)/calendar")}
-                          className={`rounded-2xl p-4 min-w-48 ${isOverdue ? "bg-red-500" : "bg-amber-400"}`}
-                        >
-                          <Text className="text-white text-xs font-medium mb-1 opacity-90">{item.petName}</Text>
-                          <Text className="text-white font-semibold text-sm leading-tight">{item.title}</Text>
-                          <Text className={`text-xs mt-2 ${isOverdue ? "text-red-100" : "text-amber-100"}`}>
-                            {isOverdue ? `Venceu em ${formatDateISO(item.date)}` : "Hoje"}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
+            alerts.length > 0 ? (
+              <View className="mb-4">
+                {/* Seção: Atrasados */}
+                {overdue.length > 0 && (
+                  <View className="mb-4">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                      <Text className="text-red-500 font-bold text-sm uppercase tracking-wide">Atrasados</Text>
+                    </View>
+                    {overdue.map((item) => (
+                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                    ))}
+                  </View>
                 )}
+
+                {/* Seção: Hoje */}
+                {todayAlerts.length > 0 && (
+                  <View className="mb-4">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Ionicons name="today-outline" size={16} color="#d97706" />
+                      <Text className="text-amber-600 font-bold text-sm uppercase tracking-wide">Hoje</Text>
+                    </View>
+                    {todayAlerts.map((item) => (
+                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                    ))}
+                  </View>
+                )}
+
+                {/* Seção: Esta semana */}
+                {soon.length > 0 && (
+                  <View className="mb-4">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Ionicons name="calendar-outline" size={16} color="#32a060" />
+                      <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Esta semana</Text>
+                    </View>
+                    {soon.map((item) => (
+                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                    ))}
+                  </View>
+                )}
+
+                <View className="h-px bg-sage-100 mb-4" />
               </View>
             ) : null
           }
           ListEmptyComponent={
-            <View className="items-center justify-center px-8 mt-16">
-              <Text className="text-5xl mb-4">🐾</Text>
-              <Text className="text-xl font-semibold text-sage-600 text-center">
-                Nenhum pet cadastrado ainda
-              </Text>
-              <Text className="text-sage-400 text-center mt-2">
-                Toque no + para adicionar ou use o código de um tutor
-              </Text>
-            </View>
+            alerts.length === 0 ? (
+              <View className="items-center justify-center px-8 mt-16">
+                <Text className="text-5xl mb-4">🐾</Text>
+                <Text className="text-xl font-semibold text-sage-600 text-center">
+                  Nenhum pet cadastrado ainda
+                </Text>
+                <Text className="text-sage-400 text-center mt-2">
+                  Toque no + para adicionar ou use o código de um tutor
+                </Text>
+              </View>
+            ) : null
           }
-          renderItem={({ item }) => (
+          ListFooterComponent={
+            pets.length > 0 ? (
+              <View className="flex-row items-center gap-2 mb-3 mt-1">
+                <Ionicons name="paw" size={15} color="#32a060" />
+                <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Meus Pets</Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item, index }) => (
             <TouchableOpacity
               className="bg-white rounded-2xl p-4 mb-3 flex-row items-center shadow-sm"
               onPress={() => router.push(`/(app)/pet/${item.id}`)}
+              style={index === 0 && alerts.length === 0 ? { marginTop: 0 } : undefined}
             >
               {item.photo_url ? (
                 <Image source={{ uri: item.photo_url }} className="w-16 h-16 rounded-full bg-sage-100" />
@@ -300,5 +361,35 @@ export default function PetsScreen() {
         />
       </View>
     </SafeAreaView>
+  );
+}
+
+function AlertCard({ item, onPress }: { item: AlertItem; onPress: () => void }) {
+  const isOverdue = item.urgency === "overdue";
+  const isToday = item.urgency === "today";
+
+  const bgColor = isOverdue ? "bg-red-50" : isToday ? "bg-amber-50" : "bg-sage-50";
+  const borderColor = isOverdue ? "border-red-200" : isToday ? "border-amber-200" : "border-sage-200";
+  const iconColor = isOverdue ? "#ef4444" : isToday ? "#d97706" : "#32a060";
+  const petColor = isOverdue ? "text-red-400" : isToday ? "text-amber-500" : "text-sage-400";
+  const titleColor = isOverdue ? "text-red-700" : isToday ? "text-amber-700" : "text-sage-700";
+  const dateColor = isOverdue ? "text-red-400" : isToday ? "text-amber-400" : "text-sage-400";
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className={`rounded-xl p-3 mb-2 border flex-row items-center gap-3 ${bgColor} ${borderColor}`}
+    >
+      <View className={`w-8 h-8 rounded-full items-center justify-center ${isOverdue ? "bg-red-100" : isToday ? "bg-amber-100" : "bg-sage-100"}`}>
+        <Ionicons name={TYPE_ICON[item.type] as any} size={16} color={iconColor} />
+      </View>
+      <View className="flex-1">
+        <Text className={`text-xs font-medium ${petColor}`}>{item.petName} · {TYPE_LABEL[item.type]}</Text>
+        <Text className={`text-sm font-semibold ${titleColor}`} numberOfLines={1}>{item.title}</Text>
+      </View>
+      <Text className={`text-xs ${dateColor}`}>
+        {isToday ? "Hoje" : isOverdue ? formatDateISO(item.date) : formatDateISO(item.date)}
+      </Text>
+    </TouchableOpacity>
   );
 }
