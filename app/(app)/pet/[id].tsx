@@ -22,15 +22,6 @@ import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition } from "@/types";
 
-interface MlProduct {
-  id: string;
-  title: string;
-  price: number;
-  currency_id: string;
-  thumbnail: string;
-  permalink: string;
-  condition: string;
-}
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
 const SEVERITY_CONFIG = {
@@ -68,8 +59,6 @@ export default function PetDetailScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [mlQuery, setMlQuery] = useState<string | null>(null);
-  const [mlResults, setMlResults] = useState<MlProduct[]>([]);
-  const [mlLoading, setMlLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -129,19 +118,8 @@ export default function PetDetailScreen() {
     }
   }
 
-  async function openMlSearch(medName: string) {
+  function openMlSearch(medName: string) {
     setMlQuery(medName);
-    setMlResults([]);
-    setMlLoading(true);
-    try {
-      const encoded = encodeURIComponent(medName);
-      const res = await fetch(`https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=10`);
-      const json = await res.json();
-      setMlResults((json.results ?? []) as MlProduct[]);
-    } catch {
-      setMlResults([]);
-    }
-    setMlLoading(false);
   }
 
   async function saveCondition() {
@@ -590,7 +568,7 @@ export default function PetDetailScreen() {
 
       </ScrollView>
 
-      {/* Mercado Livre modal */}
+      {/* Modal de compra */}
       <Modal
         visible={mlQuery !== null}
         transparent
@@ -598,64 +576,44 @@ export default function PetDetailScreen() {
         onRequestClose={() => setMlQuery(null)}
       >
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-white rounded-t-3xl" style={{ maxHeight: "85%" }}>
-            <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-sage-100">
-              <View className="flex-1">
-                <Text className="text-sage-800 font-bold text-base">Mercado Livre</Text>
-                <Text className="text-sage-400 text-xs" numberOfLines={1}>{mlQuery}</Text>
-              </View>
+          <View className="bg-white rounded-t-3xl px-5 pt-5 pb-8">
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-sage-800 font-bold text-base">Comprar medicamento</Text>
               <TouchableOpacity onPress={() => setMlQuery(null)} hitSlop={8}>
                 <Ionicons name="close" size={22} color="#165c39" />
               </TouchableOpacity>
             </View>
 
-            {mlLoading ? (
-              <View className="py-12 items-center">
-                <ActivityIndicator color="#32a060" size="large" />
-                <Text className="text-sage-400 text-sm mt-3">Buscando produtos...</Text>
-              </View>
-            ) : mlResults.length === 0 ? (
-              <View className="py-12 items-center px-6">
-                <Text className="text-3xl mb-3">🛒</Text>
-                <Text className="text-sage-500 text-center">Nenhum produto encontrado para "{mlQuery}".</Text>
-              </View>
-            ) : (
-              <ScrollView className="px-4 pt-2 pb-4" showsVerticalScrollIndicator={false}>
-                {mlResults.map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    onPress={() => Linking.openURL(product.permalink)}
-                    className="flex-row items-center bg-white border border-sage-100 rounded-2xl p-3 mb-2"
-                    activeOpacity={0.75}
-                  >
-                    {product.thumbnail ? (
-                      <Image
-                        source={{ uri: product.thumbnail.replace("http://", "https://") }}
-                        className="w-14 h-14 rounded-xl bg-sage-50"
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <View className="w-14 h-14 rounded-xl bg-sage-50 items-center justify-center">
-                        <Ionicons name="medical-outline" size={24} color="#60b880" />
-                      </View>
-                    )}
-                    <View className="flex-1 ml-3">
-                      <Text className="text-sage-800 text-sm font-medium leading-snug" numberOfLines={2}>
-                        {product.title}
-                      </Text>
-                      <Text className="text-sage-600 font-bold text-sm mt-1">
-                        R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </Text>
-                      {product.condition === "new" && (
-                        <Text className="text-sage-400 text-xs">Novo</Text>
-                      )}
-                    </View>
-                    <Ionicons name="open-outline" size={16} color="#60b880" />
-                  </TouchableOpacity>
-                ))}
-                <View className="pb-4" />
-              </ScrollView>
-            )}
+            <Text className="text-sage-500 text-xs mb-2">Edite o nome da busca se precisar:</Text>
+            <TextInput
+              className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50 mb-4"
+              value={mlQuery ?? ""}
+              onChangeText={setMlQuery}
+              placeholder="Nome do produto"
+              placeholderTextColor="#60b880"
+            />
+
+            <TouchableOpacity
+              className="bg-[#FFE600] rounded-2xl py-4 flex-row items-center justify-center gap-2 mb-3"
+              onPress={() => {
+                const q = encodeURIComponent(mlQuery ?? "");
+                Linking.openURL(`https://www.mercadolivre.com.br/jm/search?as_word=${q}`);
+              }}
+            >
+              <Text className="text-[#333] font-bold text-base">Buscar no Mercado Livre</Text>
+              <Ionicons name="open-outline" size={18} color="#333" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="border border-sage-200 rounded-2xl py-3.5 flex-row items-center justify-center gap-2"
+              onPress={() => {
+                const q = encodeURIComponent(`${mlQuery} para pets comprar`);
+                Linking.openURL(`https://www.google.com/search?q=${q}`);
+              }}
+            >
+              <Ionicons name="search-outline" size={16} color="#165c39" />
+              <Text className="text-sage-600 font-medium text-sm">Buscar no Google</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
