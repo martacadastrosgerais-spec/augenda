@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   FlatList,
+  Modal,
   Platform,
   Share,
   TextInput,
@@ -15,6 +16,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
@@ -53,6 +55,7 @@ export default function PetDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -271,16 +274,30 @@ export default function PetDetailScreen() {
         </View>
 
         {pet.emergency_card_enabled && (
-          <TouchableOpacity
-            onPress={shareEmergencyCard}
-            className="mt-4 pt-4 border-t border-sage-100 flex-row items-center gap-2"
-          >
-            <View className="bg-red-50 rounded-full p-1">
-              <Ionicons name="medical" size={14} color="#ef4444" />
+          <View className="mt-4 pt-4 border-t border-sage-100">
+            <View className="flex-row items-center gap-2 mb-2">
+              <View className="bg-red-50 rounded-full p-1">
+                <Ionicons name="medical" size={14} color="#ef4444" />
+              </View>
+              <Text className="text-red-400 text-xs font-medium flex-1">Cartão de emergência ativo</Text>
             </View>
-            <Text className="text-red-400 text-xs font-medium flex-1">Cartão de emergência ativo</Text>
-            <Ionicons name="share-outline" size={16} color="#ef4444" />
-          </TouchableOpacity>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => setShowQR(true)}
+                className="flex-1 flex-row items-center justify-center gap-1 border border-red-200 rounded-xl py-2"
+              >
+                <Ionicons name="qr-code-outline" size={15} color="#ef4444" />
+                <Text className="text-red-400 text-xs font-medium">QR Code</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={shareEmergencyCard}
+                className="flex-1 flex-row items-center justify-center gap-1 border border-red-200 rounded-xl py-2"
+              >
+                <Ionicons name="share-outline" size={15} color="#ef4444" />
+                <Text className="text-red-400 text-xs font-medium">Compartilhar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       </View>
 
@@ -497,6 +514,53 @@ export default function PetDetailScreen() {
           </>
         )}
       </View>
+
+      {/* QR Code modal */}
+      <Modal
+        visible={showQR}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowQR(false)}
+      >
+        <TouchableOpacity
+          className="flex-1 bg-black/60 items-center justify-center"
+          activeOpacity={1}
+          onPress={() => setShowQR(false)}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <View className="bg-white rounded-3xl p-8 mx-6 items-center shadow-xl">
+              <View className="flex-row items-center gap-2 mb-4">
+                <Ionicons name="medical" size={18} color="#ef4444" />
+                <Text className="text-sage-800 font-bold text-lg">Cartão de emergência</Text>
+              </View>
+              <Text className="text-sage-500 text-sm text-center mb-5">
+                Aponte a câmera para acessar{"\n"}o cartão de <Text className="font-semibold">{pet.name}</Text>
+              </Text>
+              <View className="p-3 bg-white rounded-2xl border border-sage-100">
+                <QRCode
+                  value={getEmergencyUrl()}
+                  size={200}
+                  color="#1a1a1a"
+                  backgroundColor="#ffffff"
+                />
+              </View>
+              <Text className="text-sage-300 text-xs mt-4 text-center" numberOfLines={1}>
+                {getEmergencyUrl()}
+              </Text>
+              <TouchableOpacity
+                onPress={shareEmergencyCard}
+                className="mt-4 flex-row items-center gap-2 bg-red-50 rounded-xl px-5 py-3"
+              >
+                <Ionicons name="share-outline" size={16} color="#ef4444" />
+                <Text className="text-red-400 text-sm font-medium">Compartilhar link</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowQR(false)} className="mt-3">
+                <Text className="text-sage-400 text-sm">Fechar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
