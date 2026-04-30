@@ -477,6 +477,16 @@ export default function PetDetailScreen() {
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: `/(app)/pet/${id}/edit-medication` as any,
+                        params: { medicationId: item.id },
+                      })}
+                      className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                    >
+                      <Ionicons name="create-outline" size={14} color="#165c39" />
+                      <Text className="text-sage-600 text-xs font-medium">Editar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       onPress={() => openMlSearch(item.name)}
                       className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
                     >
