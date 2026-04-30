@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Image,
+  Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { BreedPicker } from "@/components/BreedPicker";
@@ -18,6 +21,29 @@ import { DOG_BREEDS, CAT_BREEDS } from "@/constants/breeds";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { Species } from "@/types";
 
+async function uploadPhoto(petId: string, uri: string): Promise<string | null> {
+  try {
+    let blob: Blob;
+    if (Platform.OS === "web") {
+      const res = await fetch(uri);
+      blob = await res.blob();
+    } else {
+      const res = await fetch(uri);
+      blob = await res.blob();
+    }
+    const path = `${petId}/photo.jpg`;
+    const { error } = await supabase.storage.from("pet-photos").upload(path, blob, {
+      contentType: "image/jpeg",
+      upsert: true,
+    });
+    if (error) return null;
+    const { data } = supabase.storage.from("pet-photos").getPublicUrl(path);
+    return data.publicUrl + `?t=${Date.now()}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function NewPetScreen() {
   const { user } = useAuth();
   const router = useRouter();
@@ -25,6 +51,8 @@ export default function NewPetScreen() {
   const [species, setSpecies] = useState<Species>("dog");
   const [breed, setBreed] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [microchip, setMicrochip] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,38 +62,76 @@ export default function NewPetScreen() {
       setSpecies("dog");
       setBreed("");
       setBirthDate("");
+      setMicrochip("");
+      setPhotoUri(null);
       setError(null);
     }, [])
   );
 
+  async function pickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      setError("Permissão de fotos negada. Ative nas configurações.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+  }
+
+  async function takePhoto() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm.status !== "granted") {
+      setError("Permissão de câmera negada. Ative nas configurações.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+  }
+
   async function handleSave() {
     setError(null);
-    if (!name.trim()) {
-      setError("Informe o nome do pet.");
-      return;
-    }
+    if (!name.trim()) { setError("Informe o nome do pet."); return; }
     const parsedDate = birthDate ? parseDateBR(birthDate) : null;
-    if (birthDate && !parsedDate) {
-      setError("Data inválida. Use o formato DD/MM/AAAA.");
-      return;
-    }
+    if (birthDate && !parsedDate) { setError("Data inválida. Use o formato DD/MM/AAAA."); return; }
 
     setLoading(true);
-    const { error: dbError } = await supabase.from("pets").insert({
-      user_id: user!.id,
-      name: name.trim(),
-      species,
-      breed: breed.trim() || null,
-      birth_date: parsedDate,
-    });
-    setLoading(false);
+    const { data: inserted, error: dbError } = await supabase
+      .from("pets")
+      .insert({
+        user_id: user!.id,
+        name: name.trim(),
+        species,
+        breed: breed.trim() || null,
+        birth_date: parsedDate,
+        microchip: microchip.trim() || null,
+      })
+      .select("id")
+      .single();
 
-    if (dbError) {
+    if (dbError || !inserted) {
       setError("Não foi possível salvar. Tente novamente.");
-      console.error("[NewPet] insert error:", dbError);
-    } else {
-      router.replace("/(app)");
+      setLoading(false);
+      return;
     }
+
+    if (photoUri) {
+      const url = await uploadPhoto(inserted.id, photoUri);
+      if (url) {
+        await supabase.from("pets").update({ photo_url: url }).eq("id", inserted.id);
+      }
+    }
+
+    setLoading(false);
+    router.replace("/(app)");
   }
 
   return (
@@ -78,7 +144,35 @@ export default function NewPetScreen() {
       </View>
 
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <View className="bg-white rounded-2xl p-5 mt-4 shadow-sm">
+        {/* Foto */}
+        <View className="items-center mt-6 mb-2">
+          <TouchableOpacity onPress={pickPhoto} activeOpacity={0.8}>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                className="w-28 h-28 rounded-full bg-sage-100"
+              />
+            ) : (
+              <View className="w-28 h-28 rounded-full bg-sage-100 items-center justify-center border-2 border-dashed border-sage-300">
+                <Ionicons name="camera-outline" size={32} color="#60b880" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <View className="flex-row gap-3 mt-2">
+            <TouchableOpacity onPress={pickPhoto} className="flex-row items-center gap-1 px-3 py-1.5 bg-sage-50 rounded-full border border-sage-200">
+              <Ionicons name="images-outline" size={14} color="#165c39" />
+              <Text className="text-sage-600 text-xs font-medium">Galeria</Text>
+            </TouchableOpacity>
+            {Platform.OS !== "web" && (
+              <TouchableOpacity onPress={takePhoto} className="flex-row items-center gap-1 px-3 py-1.5 bg-sage-50 rounded-full border border-sage-200">
+                <Ionicons name="camera-outline" size={14} color="#165c39" />
+                <Text className="text-sage-600 text-xs font-medium">Câmera</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View className="bg-white rounded-2xl p-5 mt-2 shadow-sm">
           <FormError message={error} />
 
           <View className="mb-4">
@@ -122,7 +216,7 @@ export default function NewPetScreen() {
             />
           </View>
 
-          <View className="mb-2">
+          <View className="mb-4">
             <Text className="text-sm text-sage-600 mb-1 font-medium">Data de nascimento</Text>
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
@@ -132,6 +226,18 @@ export default function NewPetScreen() {
               onChangeText={(t) => { setBirthDate(formatDateInput(t)); setError(null); }}
               keyboardType="numeric"
               maxLength={10}
+            />
+          </View>
+
+          <View>
+            <Text className="text-sm text-sage-600 mb-1 font-medium">Microchip</Text>
+            <TextInput
+              className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
+              placeholder="Número do microchip (opcional)"
+              placeholderTextColor="#60b880"
+              value={microchip}
+              onChangeText={setMicrochip}
+              keyboardType="number-pad"
             />
           </View>
         </View>

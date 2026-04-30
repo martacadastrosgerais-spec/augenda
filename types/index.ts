@@ -147,6 +147,15 @@ export interface MedicationDose {
   created_at: string;
 }
 
+export interface WeightLog {
+  id: string;
+  pet_id: string;
+  weight_kg: number;
+  measured_at: string;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Attachment {
   id: string;
   procedure_id: string;
