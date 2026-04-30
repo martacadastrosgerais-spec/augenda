@@ -435,10 +435,15 @@ export default function PetDetailScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View className="mt-2 pt-2 border-t border-sage-100 flex-row gap-4">
+                  <View className="mt-2 pt-2 border-t border-sage-100 flex-row flex-wrap gap-x-4 gap-y-1 items-center">
                     <Text className="text-sage-400 text-xs">Início: {formatDateISO(item.started_at)}</Text>
-                    {item.ends_at && (
+                    {item.ends_at ? (
                       <Text className="text-sage-400 text-xs">Fim: {formatDateISO(item.ends_at)}</Text>
+                    ) : (
+                      <View className="flex-row items-center gap-1">
+                        <Ionicons name="infinite-outline" size={11} color="#32a060" />
+                        <Text className="text-sage-500 text-xs font-medium">Uso contínuo</Text>
+                      </View>
                     )}
                   </View>
                   {lastDoses[item.id] && (
@@ -449,8 +454,8 @@ export default function PetDetailScreen() {
                       </Text>
                     </View>
                   )}
-                  {item.active && (
-                    <View className="flex-row gap-2 mt-2">
+                  <View className="flex-row gap-2 mt-2">
+                    {item.active && (
                       <TouchableOpacity
                         onPress={() => router.push({
                           pathname: `/(app)/pet/${id}/add-dose` as any,
@@ -461,15 +466,15 @@ export default function PetDetailScreen() {
                         <Ionicons name="add-circle-outline" size={14} color="#165c39" />
                         <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => openMlSearch(item.name)}
-                        className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
-                      >
-                        <Ionicons name="cart-outline" size={14} color="#165c39" />
-                        <Text className="text-sage-600 text-xs font-medium">Comprar</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                    )}
+                    <TouchableOpacity
+                      onPress={() => openMlSearch(item.name)}
+                      className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                    >
+                      <Ionicons name="cart-outline" size={14} color="#165c39" />
+                      <Text className="text-sage-600 text-xs font-medium">Comprar</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
