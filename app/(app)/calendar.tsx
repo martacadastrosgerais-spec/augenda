@@ -341,14 +341,12 @@ export default function CalendarScreen() {
           <Text className="text-2xl font-bold text-sage-700">Agenda</Text>
           <Text className="text-sage-400 text-sm">{PANEL_LABELS[panel]}</Text>
         </View>
-        {panel === "reminders" && (
-          <TouchableOpacity
-            className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
-            onPress={() => router.push("/(app)/reminders/new")}
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
+          onPress={() => router.push("/(app)/new-event" as any)}
+        >
+          <Ionicons name="add" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {/* Panel toggle — 3 abas */}
