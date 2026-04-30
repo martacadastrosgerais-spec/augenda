@@ -59,6 +59,7 @@ export default function AppLayout() {
       <Tabs.Screen name="pet/[id]/add-log" options={{ href: null }} />
       <Tabs.Screen name="pet/[id]/add-dose" options={{ href: null }} />
       <Tabs.Screen name="new-event" options={{ href: null }} />
+      <Tabs.Screen name="pet/[id]/scan-vaccines" options={{ href: null }} />
     </Tabs>
   );
 }

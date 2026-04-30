@@ -37,6 +37,13 @@
           "icon": "./assets/images/icon.png",
           "color": "#32a060"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O AUgenda precisa acessar suas fotos para ler a carteira de vacinas.",
+          "cameraPermission": "O AUgenda precisa da câmera para fotografar a carteira de vacinas."
+        }
       ]
     ],
     "experiments": {

@@ -362,13 +362,22 @@ export default function PetDetailScreen() {
       <View className="px-5 pb-8">
         {activeTab === "vaccines" && (
           <>
-            <TouchableOpacity
-              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
-              onPress={() => router.push(`/(app)/pet/${id}/add-vaccine`)}
-            >
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text className="text-white font-medium ml-1">Registrar vacina</Text>
-            </TouchableOpacity>
+            <View className="flex-row gap-2 mb-3">
+              <TouchableOpacity
+                className="flex-1 bg-sage-400 rounded-xl py-3 flex-row items-center justify-center"
+                onPress={() => router.push(`/(app)/pet/${id}/add-vaccine`)}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text className="text-white font-medium ml-1">Registrar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-sage-700 rounded-xl py-3 flex-row items-center justify-center"
+                onPress={() => router.push(`/(app)/pet/${id}/scan-vaccines` as any)}
+              >
+                <Ionicons name="scan-outline" size={17} color="#fff" />
+                <Text className="text-white font-medium ml-1">Ler carteira</Text>
+              </TouchableOpacity>
+            </View>
 
             {vaccines.length === 0 ? (
               <View className="items-center mt-8">
