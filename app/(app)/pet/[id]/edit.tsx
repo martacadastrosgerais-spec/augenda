@@ -27,12 +27,13 @@ const SEX_OPTIONS: { value: PetSex; label: string }[] = [
   { value: "unknown", label: "Não sei" },
 ];
 
-async function uploadPhoto(petId: string, uri: string): Promise<string | null> {
+async function uploadPhoto(petId: string, base64: string): Promise<string | null> {
   try {
-    const res = await fetch(uri);
-    const blob = await res.blob();
     const path = `${petId}/photo.jpg`;
-    const { error } = await supabase.storage.from("pet-photos").upload(path, blob, {
+    const byteChars = atob(base64);
+    const bytes = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+    const { error } = await supabase.storage.from("pet-photos").upload(path, bytes, {
       contentType: "image/jpeg",
       upsert: true,
     });
@@ -57,7 +58,8 @@ export default function EditPetScreen() {
   const [microchip, setMicrochip] = useState("");
   const [neutered, setNeutered] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
+  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);   // local URI para preview
+  const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null); // base64 para upload
 
   // Health & emergency
   const [allergies, setAllergies] = useState("");
@@ -157,8 +159,12 @@ export default function EditPetScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled) setNewPhotoUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setNewPhotoUri(result.assets[0].uri);
+      setNewPhotoBase64(result.assets[0].base64 ?? null);
+    }
   }
 
   async function takePhoto() {
@@ -168,8 +174,12 @@ export default function EditPetScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled) setNewPhotoUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setNewPhotoUri(result.assets[0].uri);
+      setNewPhotoBase64(result.assets[0].base64 ?? null);
+    }
   }
 
   async function handleSave() {
@@ -181,8 +191,8 @@ export default function EditPetScreen() {
     setSaving(true);
 
     let finalPhotoUrl = photoUrl;
-    if (newPhotoUri) {
-      const uploaded = await uploadPhoto(id, newPhotoUri);
+    if (newPhotoBase64) {
+      const uploaded = await uploadPhoto(id, newPhotoBase64);
       if (uploaded) finalPhotoUrl = uploaded;
     }
 

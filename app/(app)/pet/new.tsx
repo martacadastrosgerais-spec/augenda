@@ -21,18 +21,13 @@ import { DOG_BREEDS, CAT_BREEDS } from "@/constants/breeds";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { Species } from "@/types";
 
-async function uploadPhoto(petId: string, uri: string): Promise<string | null> {
+async function uploadPhoto(petId: string, base64: string): Promise<string | null> {
   try {
-    let blob: Blob;
-    if (Platform.OS === "web") {
-      const res = await fetch(uri);
-      blob = await res.blob();
-    } else {
-      const res = await fetch(uri);
-      blob = await res.blob();
-    }
     const path = `${petId}/photo.jpg`;
-    const { error } = await supabase.storage.from("pet-photos").upload(path, blob, {
+    const byteChars = atob(base64);
+    const bytes = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+    const { error } = await supabase.storage.from("pet-photos").upload(path, bytes, {
       contentType: "image/jpeg",
       upsert: true,
     });
@@ -53,6 +48,7 @@ export default function NewPetScreen() {
   const [birthDate, setBirthDate] = useState("");
   const [microchip, setMicrochip] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +60,7 @@ export default function NewPetScreen() {
       setBirthDate("");
       setMicrochip("");
       setPhotoUri(null);
+      setPhotoBase64(null);
       setError(null);
     }, [])
   );
@@ -79,8 +76,12 @@ export default function NewPetScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setPhotoBase64(result.assets[0].base64 ?? null);
+    }
   }
 
   async function takePhoto() {
@@ -93,8 +94,12 @@ export default function NewPetScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setPhotoBase64(result.assets[0].base64 ?? null);
+    }
   }
 
   async function handleSave() {
@@ -123,8 +128,8 @@ export default function NewPetScreen() {
       return;
     }
 
-    if (photoUri) {
-      const url = await uploadPhoto(inserted.id, photoUri);
+    if (photoBase64) {
+      const url = await uploadPhoto(inserted.id, photoBase64);
       if (url) {
         await supabase.from("pets").update({ photo_url: url }).eq("id", inserted.id);
       }
