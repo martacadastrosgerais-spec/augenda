@@ -20,7 +20,7 @@ import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, Procedure, SymptomLog, ChronicCondition } from "@/types";
+import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition } from "@/types";
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
 const SEVERITY_CONFIG = {
@@ -48,6 +48,7 @@ export default function PetDetailScreen() {
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [conditions, setConditions] = useState<ChronicCondition[]>([]);
+  const [lastDoses, setLastDoses] = useState<Record<string, string>>({});
   const [addingCondition, setAddingCondition] = useState(false);
   const [newConditionName, setNewConditionName] = useState("");
   const [savingCondition, setSavingCondition] = useState(false);
@@ -66,13 +67,14 @@ export default function PetDetailScreen() {
   }, [id]);
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
       supabase.from("procedures").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
       supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
       supabase.from("chronic_conditions").select("*").eq("pet_id", id).order("created_at"),
+      supabase.from("medication_doses").select("medication_id, administered_at").eq("pet_id", id).order("administered_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -83,6 +85,13 @@ export default function PetDetailScreen() {
     setProcedures(procsRes.data ?? []);
     setLogs(logsRes.data ?? []);
     setConditions((condRes as any).data ?? []);
+
+    const doseMap: Record<string, string> = {};
+    for (const d of (dosesRes.data ?? []) as MedicationDose[]) {
+      if (!doseMap[d.medication_id]) doseMap[d.medication_id] = d.administered_at;
+    }
+    setLastDoses(doseMap);
+
     setLoading(false);
   }
 
@@ -412,6 +421,26 @@ export default function PetDetailScreen() {
                         <Text className="text-sage-400 text-xs">Fim: {formatDateISO(item.ends_at)}</Text>
                       )}
                     </View>
+                    {lastDoses[item.id] && (
+                      <View className="mt-1 flex-row items-center gap-1">
+                        <Ionicons name="checkmark-circle-outline" size={12} color="#7da87b" />
+                        <Text className="text-sage-400 text-xs">
+                          Última dose: {formatDateISO(lastDoses[item.id])}
+                        </Text>
+                      </View>
+                    )}
+                    {item.active && (
+                      <TouchableOpacity
+                        onPress={() => router.push({
+                          pathname: `/(app)/pet/${id}/add-dose` as any,
+                          params: { medicationId: item.id, medicationName: item.name },
+                        })}
+                        className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                      >
+                        <Ionicons name="add-circle-outline" size={14} color="#527558" />
+                        <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               />

@@ -136,6 +136,16 @@ export interface SymptomLog {
   created_at: string;
 }
 
+export interface MedicationDose {
+  id: string;
+  medication_id: string;
+  pet_id: string;
+  administered_at: string;
+  administered_by?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Attachment {
   id: string;
   procedure_id: string;
