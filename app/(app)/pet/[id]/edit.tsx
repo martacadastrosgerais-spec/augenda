@@ -124,7 +124,7 @@ export default function EditPetScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -133,7 +133,7 @@ export default function EditPetScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Editar Pet</Text>
       </View>
@@ -150,7 +150,7 @@ export default function EditPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Nome do seu pet"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={name}
               onChangeText={(v) => { setName(v); setError(null); }}
             />
@@ -191,7 +191,7 @@ export default function EditPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="DD/MM/AAAA"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={birthDate}
               onChangeText={(t) => { setBirthDate(formatDateInput(t)); setError(null); }}
               keyboardType="numeric"
@@ -205,7 +205,7 @@ export default function EditPetScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="Ex: 4,5"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={weightKg}
                 onChangeText={(v) => { setWeightKg(v); setError(null); }}
                 keyboardType="decimal-pad"
@@ -216,7 +216,7 @@ export default function EditPetScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="Número"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={microchip}
                 onChangeText={setMicrochip}
               />
@@ -247,7 +247,7 @@ export default function EditPetScreen() {
             <Switch
               value={neutered}
               onValueChange={setNeutered}
-              trackColor={{ false: "#e6ede7", true: "#7da87b" }}
+              trackColor={{ false: "#cce8d4", true: "#32a060" }}
               thumbColor="#fff"
             />
           </View>
@@ -262,7 +262,7 @@ export default function EditPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Ex: alergia a frango, intolerância a lactose..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={allergies}
               onChangeText={setAllergies}
               multiline
@@ -281,14 +281,14 @@ export default function EditPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50 mb-2"
               placeholder="Nome do veterinário"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={vetName}
               onChangeText={setVetName}
             />
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Telefone"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={vetPhone}
               onChangeText={setVetPhone}
               keyboardType="phone-pad"
@@ -300,14 +300,14 @@ export default function EditPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50 mb-2"
               placeholder="Nome"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={emergencyContactName}
               onChangeText={setEmergencyContactName}
             />
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Telefone"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={emergencyContactPhone}
               onChangeText={setEmergencyContactPhone}
               keyboardType="phone-pad"
@@ -327,13 +327,13 @@ export default function EditPetScreen() {
             <Switch
               value={emergencyCardEnabled}
               onValueChange={setEmergencyCardEnabled}
-              trackColor={{ false: "#e6ede7", true: "#7da87b" }}
+              trackColor={{ false: "#cce8d4", true: "#32a060" }}
               thumbColor="#fff"
             />
           </View>
           {emergencyCardEnabled && (
             <View className="mt-3 pt-3 border-t border-sage-100 flex-row items-center gap-2">
-              <Ionicons name="shield-checkmark-outline" size={14} color="#7da87b" />
+              <Ionicons name="shield-checkmark-outline" size={14} color="#32a060" />
               <Text className="text-sage-500 text-xs">
                 O link público estará disponível na tela do pet após salvar.
               </Text>

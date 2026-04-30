@@ -212,7 +212,7 @@ export default function NewEventScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace("/(app)/calendar")} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Novo Evento</Text>
       </View>
@@ -231,7 +231,7 @@ export default function NewEventScreen() {
                   onPress={() => { setKind(opt.value); setError(null); }}
                   className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl border ${active ? opt.activeColor : `bg-white ${opt.color}`}`}
                 >
-                  <Ionicons name={opt.icon as any} size={14} color={active ? "#fff" : "#7da87b"} />
+                  <Ionicons name={opt.icon as any} size={14} color={active ? "#fff" : "#32a060"} />
                   <Text className={`text-sm font-medium ${active ? "text-white" : "text-sage-600"}`}>{opt.label}</Text>
                 </TouchableOpacity>
               );
@@ -245,7 +245,7 @@ export default function NewEventScreen() {
             Aplicar para *
           </Text>
           {loadingPets ? (
-            <ActivityIndicator color="#7da87b" />
+            <ActivityIndicator color="#32a060" />
           ) : pets.length === 0 ? (
             <Text className="text-sage-400 text-sm">Nenhum pet cadastrado.</Text>
           ) : (
@@ -366,7 +366,7 @@ export default function NewEventScreen() {
                   <TextInput
                     className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                     placeholder="DD/MM/AAAA"
-                    placeholderTextColor="#a8c5ad"
+                    placeholderTextColor="#60b880"
                     value={remDate}
                     onChangeText={(v) => { setRemDate(formatDateInput(v)); setError(null); }}
                     keyboardType="numeric"
@@ -378,7 +378,7 @@ export default function NewEventScreen() {
                   <TextInput
                     className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                     placeholder="HH:MM"
-                    placeholderTextColor="#a8c5ad"
+                    placeholderTextColor="#60b880"
                     value={remTime}
                     onChangeText={(v) => { setRemTime(formatTimeInput(v)); setError(null); }}
                     keyboardType="numeric"
@@ -412,7 +412,7 @@ export default function NewEventScreen() {
                   <Switch
                     value={remNotify}
                     onValueChange={setRemNotify}
-                    trackColor={{ false: "#e6ede7", true: "#7da87b" }}
+                    trackColor={{ false: "#cce8d4", true: "#32a060" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -450,7 +450,7 @@ function Field({ label, value, onChange, placeholder }: {
       <TextInput
         className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
         placeholder={placeholder}
-        placeholderTextColor="#a8c5ad"
+        placeholderTextColor="#60b880"
         value={value}
         onChangeText={onChange}
       />
@@ -467,7 +467,7 @@ function DateField({ label, value, onChange }: {
       <TextInput
         className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
         placeholder="DD/MM/AAAA"
-        placeholderTextColor="#a8c5ad"
+        placeholderTextColor="#60b880"
         value={value}
         onChangeText={(t) => onChange(formatDateInput(t))}
         keyboardType="numeric"
@@ -486,7 +486,7 @@ function TextAreaField({ label, value, onChange }: {
       <TextInput
         className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
         placeholder="Observações opcionais"
-        placeholderTextColor="#a8c5ad"
+        placeholderTextColor="#60b880"
         value={value}
         onChangeText={onChange}
         multiline

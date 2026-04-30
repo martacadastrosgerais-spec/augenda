@@ -40,7 +40,7 @@ export function BreedPicker({ value, onChange, breeds, placeholder = "Buscar ra√
         <Text className={value ? "text-sage-800" : "text-sage-300"}>
           {value || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={16} color="#a8c5ad" />
+        <Ionicons name="chevron-down" size={16} color="#60b880" />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -56,23 +56,23 @@ export function BreedPicker({ value, onChange, breeds, placeholder = "Buscar ra√
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-lg font-semibold text-sage-700">Selecionar ra√ßa</Text>
                 <TouchableOpacity onPress={() => setOpen(false)}>
-                  <Ionicons name="close" size={22} color="#7da87b" />
+                  <Ionicons name="close" size={22} color="#32a060" />
                 </TouchableOpacity>
               </View>
 
               <View className="flex-row items-center bg-sage-50 border border-sage-200 rounded-xl px-3 mb-2">
-                <Ionicons name="search" size={16} color="#a8c5ad" />
+                <Ionicons name="search" size={16} color="#60b880" />
                 <TextInput
                   className="flex-1 py-3 px-2 text-sage-800"
                   placeholder="Buscar..."
-                  placeholderTextColor="#a8c5ad"
+                  placeholderTextColor="#60b880"
                   value={query}
                   onChangeText={setQuery}
                   autoFocus
                 />
                 {query.length > 0 && (
                   <TouchableOpacity onPress={() => setQuery("")}>
-                    <Ionicons name="close-circle" size={16} color="#a8c5ad" />
+                    <Ionicons name="close-circle" size={16} color="#60b880" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -94,7 +94,7 @@ export function BreedPicker({ value, onChange, breeds, placeholder = "Buscar ra√
                     {item}
                   </Text>
                   {value === item && (
-                    <Ionicons name="checkmark" size={18} color="#7da87b" />
+                    <Ionicons name="checkmark" size={18} color="#32a060" />
                   )}
                 </TouchableOpacity>
               )}

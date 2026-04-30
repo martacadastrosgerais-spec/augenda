@@ -25,7 +25,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.error) {
       return (
         <View className="flex-1 bg-cream items-center justify-center px-8">
-          <Ionicons name="warning-outline" size={48} color="#a8c5ad" />
+          <Ionicons name="warning-outline" size={48} color="#60b880" />
           <Text className="text-xl font-semibold text-sage-600 text-center mt-4">
             Algo deu errado
           </Text>

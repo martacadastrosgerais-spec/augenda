@@ -59,7 +59,7 @@ export default function EmergencyCardScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -163,7 +163,7 @@ export default function EmergencyCardScreen() {
         {medications.length > 0 && (
           <View className="bg-white mx-4 mt-3 rounded-2xl p-5 shadow-sm">
             <View className="flex-row items-center gap-2 mb-3">
-              <Ionicons name="medical-outline" size={16} color="#7da87b" />
+              <Ionicons name="medical-outline" size={16} color="#32a060" />
               <Text className="text-base font-semibold text-sage-700">Medicamentos em uso</Text>
             </View>
             {medications.map((med) => (
@@ -180,7 +180,7 @@ export default function EmergencyCardScreen() {
         {vaccines.length > 0 && (
           <View className="bg-white mx-4 mt-3 rounded-2xl p-5 shadow-sm">
             <View className="flex-row items-center gap-2 mb-3">
-              <Ionicons name="shield-checkmark-outline" size={16} color="#7da87b" />
+              <Ionicons name="shield-checkmark-outline" size={16} color="#32a060" />
               <Text className="text-base font-semibold text-sage-700">Vacinas recentes</Text>
             </View>
             {vaccines.map((vac) => (
@@ -196,7 +196,7 @@ export default function EmergencyCardScreen() {
         {(pet.vet_name || pet.vet_phone || pet.emergency_contact_name || pet.emergency_contact_phone) && (
           <View className="bg-white mx-4 mt-3 mb-6 rounded-2xl p-5 shadow-sm">
             <View className="flex-row items-center gap-2 mb-3">
-              <Ionicons name="call-outline" size={16} color="#7da87b" />
+              <Ionicons name="call-outline" size={16} color="#32a060" />
               <Text className="text-base font-semibold text-sage-700">Contatos</Text>
             </View>
 
@@ -206,7 +206,7 @@ export default function EmergencyCardScreen() {
                 {pet.vet_name && <Text className="text-sage-800 font-medium">{pet.vet_name}</Text>}
                 {pet.vet_phone && (
                   <TouchableOpacity onPress={() => callPhone(pet.vet_phone!)} className="flex-row items-center gap-1 mt-0.5">
-                    <Ionicons name="call" size={13} color="#7da87b" />
+                    <Ionicons name="call" size={13} color="#32a060" />
                     <Text className="text-sage-500 text-sm">{pet.vet_phone}</Text>
                   </TouchableOpacity>
                 )}

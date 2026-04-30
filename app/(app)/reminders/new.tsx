@@ -145,7 +145,7 @@ export default function NewReminderScreen() {
   if (loadingPets) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -154,7 +154,7 @@ export default function NewReminderScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Novo Lembrete</Text>
       </View>
@@ -195,7 +195,7 @@ export default function NewReminderScreen() {
                     type === t.value ? "bg-sage-400 border-sage-400" : "bg-white border-sage-200"
                   }`}
                 >
-                  <Ionicons name={t.icon as any} size={13} color={type === t.value ? "#fff" : "#7da87b"} />
+                  <Ionicons name={t.icon as any} size={13} color={type === t.value ? "#fff" : "#32a060"} />
                   <Text className={`text-sm font-medium ${type === t.value ? "text-white" : "text-sage-600"}`}>
                     {t.label}
                   </Text>
@@ -210,7 +210,7 @@ export default function NewReminderScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Ex: Próxima dose da raiva, Dar vermífugo..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={title}
               onChangeText={(v) => { setTitle(v); setError(null); }}
             />
@@ -223,7 +223,7 @@ export default function NewReminderScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="DD/MM/AAAA"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={date}
                 onChangeText={(v) => { setDate(formatDateInput(v)); setError(null); }}
                 keyboardType="numeric"
@@ -235,7 +235,7 @@ export default function NewReminderScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="09:00"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={time}
                 onChangeText={(v) => { setTime(formatTimeInput(v)); setError(null); }}
                 keyboardType="numeric"
@@ -270,7 +270,7 @@ export default function NewReminderScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Detalhes adicionais..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={notes}
               onChangeText={setNotes}
               multiline

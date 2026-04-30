@@ -150,7 +150,7 @@ export default function PetDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -165,7 +165,7 @@ export default function PetDetailScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700 flex-1">{pet.name}</Text>
         {user?.id === pet.user_id && (
@@ -192,13 +192,13 @@ export default function PetDetailScreen() {
             ) : (
               <>
                 <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
-                  <Ionicons name="create-outline" size={22} color="#527558" />
+                  <Ionicons name="create-outline" size={22} color="#165c39" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1">
                   <Ionicons name="trash-outline" size={22} color="#ef4444" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
-                  <Ionicons name="people-outline" size={22} color="#527558" />
+                  <Ionicons name="people-outline" size={22} color="#165c39" />
                 </TouchableOpacity>
               </>
             )}
@@ -239,7 +239,7 @@ export default function PetDetailScreen() {
             <Text className="text-xs font-semibold text-sage-600 uppercase tracking-wide">Condições crônicas</Text>
             {!addingCondition && (
               <TouchableOpacity onPress={() => setAddingCondition(true)} className="p-0.5">
-                <Ionicons name="add-circle-outline" size={18} color="#7da87b" />
+                <Ionicons name="add-circle-outline" size={18} color="#32a060" />
               </TouchableOpacity>
             )}
           </View>
@@ -263,7 +263,7 @@ export default function PetDetailScreen() {
               <TextInput
                 className="flex-1 border border-sage-200 rounded-xl px-3 py-2 text-sage-800 bg-sage-50 text-sm"
                 placeholder="Nome da condição..."
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={newConditionName}
                 onChangeText={setNewConditionName}
                 onSubmitEditing={saveCondition}
@@ -272,11 +272,11 @@ export default function PetDetailScreen() {
               />
               <TouchableOpacity onPress={saveCondition} disabled={savingCondition} hitSlop={4}>
                 {savingCondition
-                  ? <ActivityIndicator size="small" color="#7da87b" />
-                  : <Ionicons name="checkmark-circle" size={28} color="#7da87b" />}
+                  ? <ActivityIndicator size="small" color="#32a060" />
+                  : <Ionicons name="checkmark-circle" size={28} color="#32a060" />}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { setAddingCondition(false); setNewConditionName(""); }} hitSlop={4}>
-                <Ionicons name="close-circle" size={28} color="#a8c5ad" />
+                <Ionicons name="close-circle" size={28} color="#60b880" />
               </TouchableOpacity>
             </View>
           )}
@@ -362,7 +362,7 @@ export default function PetDetailScreen() {
                   </View>
                   {item.next_dose_at && (
                     <View className="mt-2 pt-2 border-t border-sage-100 flex-row items-center">
-                      <Ionicons name="calendar-outline" size={12} color="#7da87b" />
+                      <Ionicons name="calendar-outline" size={12} color="#32a060" />
                       <Text className="text-sage-500 text-xs ml-1">
                         Próxima dose: {formatDateISO(item.next_dose_at)}
                       </Text>
@@ -414,7 +414,7 @@ export default function PetDetailScreen() {
                   </View>
                   {lastDoses[item.id] && (
                     <View className="mt-1 flex-row items-center gap-1">
-                      <Ionicons name="checkmark-circle-outline" size={12} color="#7da87b" />
+                      <Ionicons name="checkmark-circle-outline" size={12} color="#32a060" />
                       <Text className="text-sage-400 text-xs">
                         Última dose: {formatDateISO(lastDoses[item.id])}
                       </Text>
@@ -428,7 +428,7 @@ export default function PetDetailScreen() {
                       })}
                       className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
                     >
-                      <Ionicons name="add-circle-outline" size={14} color="#527558" />
+                      <Ionicons name="add-circle-outline" size={14} color="#165c39" />
                       <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
                     </TouchableOpacity>
                   )}

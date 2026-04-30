@@ -84,7 +84,7 @@ export default function AddLogScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Nova Anotação</Text>
       </View>
@@ -122,7 +122,7 @@ export default function AddLogScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Ex: Vômito após alimentação, coceira no ouvido, sem apetite..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={description}
               onChangeText={(v) => { setDescription(v); setError(null); }}
               multiline
@@ -139,7 +139,7 @@ export default function AddLogScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="DD/MM/AAAA"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={date}
                 onChangeText={(v) => { setDate(formatDateInput(v)); setError(null); }}
                 keyboardType="numeric"
@@ -151,7 +151,7 @@ export default function AddLogScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="HH:MM"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={time}
                 onChangeText={(v) => { setTime(formatTimeInput(v)); setError(null); }}
                 keyboardType="numeric"

@@ -147,7 +147,7 @@ export default function PetsScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -166,7 +166,7 @@ export default function PetsScreen() {
             className="border border-sage-300 rounded-full w-10 h-10 items-center justify-center"
             onPress={() => router.push("/(app)/join")}
           >
-            <Ionicons name="enter-outline" size={20} color="#7da87b" />
+            <Ionicons name="enter-outline" size={20} color="#32a060" />
           </TouchableOpacity>
           <TouchableOpacity
             className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
@@ -213,7 +213,7 @@ export default function PetsScreen() {
                 onPress={() => router.push("/(app)/calendar")}
                 className="bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
               >
-                <Ionicons name="calendar-outline" size={18} color="#7da87b" />
+                <Ionicons name="calendar-outline" size={18} color="#32a060" />
                 <View>
                   <Text className="text-sage-600 font-bold text-sm">{soon.length} em breve</Text>
                   <Text className="text-sage-400 text-xs">Próximos 7 dias</Text>
@@ -292,7 +292,7 @@ export default function PetsScreen() {
                   <Text className="text-sage-400 text-xs mt-0.5">{getAge(item.birth_date)}</Text>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#a8c5ad" />
+              <Ionicons name="chevron-forward" size={18} color="#60b880" />
             </TouchableOpacity>
           )}
         />

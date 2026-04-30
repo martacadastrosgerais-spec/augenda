@@ -60,7 +60,7 @@ export default function AddMedicationScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Registrar Medicamento</Text>
       </View>
@@ -79,7 +79,7 @@ export default function AddMedicationScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder={placeholder}
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={value}
                 onChangeText={(v) => { set(v); setError(null); }}
               />
@@ -95,7 +95,7 @@ export default function AddMedicationScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="DD/MM/AAAA"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={value}
                 onChangeText={(t) => { set(formatDateInput(t)); setError(null); }}
                 keyboardType="numeric"
@@ -109,7 +109,7 @@ export default function AddMedicationScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Observações opcionais"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={notes}
               onChangeText={(v) => { setNotes(v); setError(null); }}
               multiline

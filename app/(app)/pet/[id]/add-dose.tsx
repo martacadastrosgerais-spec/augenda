@@ -112,7 +112,7 @@ export default function AddDoseScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-xl font-bold text-sage-700">Registrar Dose</Text>
@@ -133,7 +133,7 @@ export default function AddDoseScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="DD/MM/AAAA"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={date}
                 onChangeText={(v) => { setDate(formatDateInput(v)); setError(null); }}
                 keyboardType="numeric"
@@ -145,7 +145,7 @@ export default function AddDoseScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
                 placeholder="HH:MM"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={time}
                 onChangeText={(v) => { setTime(formatTimeInput(v)); setError(null); }}
                 keyboardType="numeric"
@@ -160,7 +160,7 @@ export default function AddDoseScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Ex: Marta, veterinário, cuidador..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={administeredBy}
               onChangeText={setAdministeredBy}
             />
@@ -172,7 +172,7 @@ export default function AddDoseScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Reação, dificuldade para tomar, etc."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={notes}
               onChangeText={setNotes}
               multiline
@@ -198,7 +198,7 @@ export default function AddDoseScreen() {
             Últimas 5 doses
           </Text>
           {loadingHistory ? (
-            <ActivityIndicator color="#7da87b" />
+            <ActivityIndicator color="#32a060" />
           ) : recentDoses.length === 0 ? (
             <Text className="text-sage-300 text-sm">Nenhuma dose registrada ainda.</Text>
           ) : (
@@ -209,7 +209,7 @@ export default function AddDoseScreen() {
               renderItem={({ item }) => (
                 <View className="bg-white rounded-xl px-4 py-3 mb-2 shadow-sm flex-row items-start gap-3">
                   <View className="bg-sage-100 rounded-full p-1.5 mt-0.5">
-                    <Ionicons name="checkmark" size={12} color="#527558" />
+                    <Ionicons name="checkmark" size={12} color="#165c39" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sage-700 text-sm font-medium">

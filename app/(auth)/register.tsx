@@ -61,7 +61,7 @@ export default function RegisterScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="seu@email.com"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={email}
               onChangeText={(v) => { setEmail(v); setError(null); }}
               autoCapitalize="none"
@@ -74,7 +74,7 @@ export default function RegisterScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="mínimo 6 caracteres"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={password}
               onChangeText={(v) => { setPassword(v); setError(null); }}
               secureTextEntry
@@ -86,7 +86,7 @@ export default function RegisterScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="••••••••"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={confirm}
               onChangeText={(v) => { setConfirm(v); setError(null); }}
               secureTextEntry

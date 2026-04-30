@@ -123,7 +123,7 @@ export default function ProfileScreen() {
             <TextInput
               className="flex-1 border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Seu nome"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={name}
               onChangeText={(v) => { setName(v); setNameError(null); setNameSuccess(false); }}
             />
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name={showPasswords ? "chevron-up" : "chevron-down"}
                 size={20}
-                color="#a8c5ad"
+                color="#60b880"
               />
             </TouchableOpacity>
           </View>
@@ -164,7 +164,7 @@ export default function ProfileScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50 mb-3"
                 placeholder="Nova senha"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={newPassword}
                 onChangeText={(v) => { setNewPassword(v); setPasswordError(null); setPasswordSuccess(false); }}
                 secureTextEntry
@@ -172,7 +172,7 @@ export default function ProfileScreen() {
               <TextInput
                 className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50 mb-3"
                 placeholder="Confirmar nova senha"
-                placeholderTextColor="#a8c5ad"
+                placeholderTextColor="#60b880"
                 value={confirmPassword}
                 onChangeText={(v) => { setConfirmPassword(v); setPasswordError(null); setPasswordSuccess(false); }}
                 secureTextEntry

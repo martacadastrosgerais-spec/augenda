@@ -72,7 +72,7 @@ export default function NewPetScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Novo Pet</Text>
       </View>
@@ -86,7 +86,7 @@ export default function NewPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Nome do seu pet"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={name}
               onChangeText={(v) => { setName(v); setError(null); }}
             />
@@ -127,7 +127,7 @@ export default function NewPetScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="DD/MM/AAAA"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={birthDate}
               onChangeText={(t) => { setBirthDate(formatDateInput(t)); setError(null); }}
               keyboardType="numeric"

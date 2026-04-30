@@ -118,7 +118,7 @@ const DOT_COLORS: Record<string, string> = {
   vaccine:    "#3b82f6",
   medication: "#f59e0b",
   procedure:  "#a855f7",
-  reminder:   "#7da87b",
+  reminder:   "#32a060",
 };
 
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -442,7 +442,7 @@ export default function CalendarScreen() {
 
       {loading && panel !== "month" ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#7da87b" size="large" />
+          <ActivityIndicator color="#32a060" size="large" />
         </View>
 
       ) : panel === "month" ? (
@@ -538,7 +538,7 @@ export default function CalendarScreen() {
                     onPress={() => addToNativeCalendar(item)}
                     disabled={isAdding}
                   >
-                    {isAdding ? <ActivityIndicator size="small" color="#7da87b" /> : <Ionicons name="calendar-outline" size={14} color="#7da87b" />}
+                    {isAdding ? <ActivityIndicator size="small" color="#32a060" /> : <Ionicons name="calendar-outline" size={14} color="#32a060" />}
                     <Text className="text-sage-500 text-xs font-medium">
                       {Platform.OS === "web" ? "Abrir no Google Calendar" : "Adicionar ao calendário"}
                     </Text>
@@ -591,12 +591,12 @@ export default function CalendarScreen() {
                   <View className="mt-3 pt-3 border-t border-sage-100 flex-row items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       {isToggling ? (
-                        <ActivityIndicator size="small" color="#7da87b" />
+                        <ActivityIndicator size="small" color="#32a060" />
                       ) : (
                         <Switch
                           value={item.enabled}
                           onValueChange={() => toggleReminder(item)}
-                          trackColor={{ false: "#e6ede7", true: "#7da87b" }}
+                          trackColor={{ false: "#cce8d4", true: "#32a060" }}
                           thumbColor="#fff"
                           style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                         />
@@ -715,13 +715,13 @@ function MonthGrid({ year, month, todayStr, dayEvents, selectedDay, loading, onS
       {/* Header */}
       <View className="flex-row items-center justify-between mb-3">
         <TouchableOpacity onPress={onPrevMonth} hitSlop={8} className="p-1">
-          <Ionicons name="chevron-back" size={20} color="#527558" />
+          <Ionicons name="chevron-back" size={20} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-sage-800 font-bold text-base">
           {MONTH_NAMES[month]} {year}
         </Text>
         <TouchableOpacity onPress={onNextMonth} hitSlop={8} className="p-1">
-          <Ionicons name="chevron-forward" size={20} color="#527558" />
+          <Ionicons name="chevron-forward" size={20} color="#165c39" />
         </TouchableOpacity>
       </View>
 
@@ -736,7 +736,7 @@ function MonthGrid({ year, month, todayStr, dayEvents, selectedDay, loading, onS
 
       {loading ? (
         <View className="py-8 items-center">
-          <ActivityIndicator color="#7da87b" />
+          <ActivityIndicator color="#32a060" />
         </View>
       ) : (
         <>
@@ -761,12 +761,12 @@ function MonthGrid({ year, month, todayStr, dayEvents, selectedDay, loading, onS
                     <View style={{
                       width: 32, height: 32, borderRadius: 16,
                       alignItems: "center", justifyContent: "center",
-                      backgroundColor: isSelected ? "#7da87b" : isToday ? "#e6ede7" : "transparent",
+                      backgroundColor: isSelected ? "#32a060" : isToday ? "#cce8d4" : "transparent",
                     }}>
                       <Text style={{
                         fontSize: 14,
                         fontWeight: isSelected || isToday ? "700" : "400",
-                        color: isSelected ? "#fff" : isToday ? "#527558" : "#2d4a30",
+                        color: isSelected ? "#fff" : isToday ? "#165c39" : "#0e4220",
                       }}>
                         {day}
                       </Text>
@@ -790,7 +790,7 @@ function MonthGrid({ year, month, todayStr, dayEvents, selectedDay, loading, onS
             {Object.entries(DOT_COLORS).map(([type, color]) => (
               <View key={type} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
-                <Text style={{ fontSize: 11, color: "#a8c5ad" }}>
+                <Text style={{ fontSize: 11, color: "#60b880" }}>
                   {type === "vaccine" ? "Vacina" : type === "medication" ? "Medicamento" : type === "procedure" ? "Procedimento" : "Lembrete"}
                 </Text>
               </View>

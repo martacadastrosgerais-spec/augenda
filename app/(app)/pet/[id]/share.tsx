@@ -124,7 +124,7 @@ export default function SharePetScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#7da87b" size="large" />
+        <ActivityIndicator color="#32a060" size="large" />
       </SafeAreaView>
     );
   }
@@ -133,7 +133,7 @@ export default function SharePetScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Compartilhar {petName}</Text>
       </View>
@@ -218,7 +218,7 @@ export default function SharePetScreen() {
           return (
             <View className="bg-white rounded-xl p-4 mb-2 shadow-sm flex-row items-center">
               <View className="w-9 h-9 rounded-full bg-sage-100 items-center justify-center mr-3">
-                <Ionicons name="person" size={18} color="#7da87b" />
+                <Ionicons name="person" size={18} color="#32a060" />
               </View>
               <View className="flex-1">
                 <Text className="text-sage-800 font-medium text-sm" numberOfLines={1}>

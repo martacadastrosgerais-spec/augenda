@@ -63,7 +63,7 @@ export default function AddProcedureScreen() {
     <SafeAreaView className="flex-1 bg-cream">
       <View className="px-5 pt-4 pb-2 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace(`/(app)/pet/${id}` as any)} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#527558" />
+          <Ionicons name="arrow-back" size={24} color="#165c39" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-sage-700">Novo Procedimento</Text>
       </View>
@@ -87,7 +87,7 @@ export default function AddProcedureScreen() {
                   <Ionicons
                     name={t.icon as any}
                     size={14}
-                    color={type === t.value ? "#fff" : "#7da87b"}
+                    color={type === t.value ? "#fff" : "#32a060"}
                   />
                   <Text className={`text-sm font-medium ${type === t.value ? "text-white" : "text-sage-600"}`}>
                     {t.label}
@@ -103,7 +103,7 @@ export default function AddProcedureScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Ex: Consulta de rotina, Hemograma..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={title}
               onChangeText={(v) => { setTitle(v); setError(null); }}
             />
@@ -115,7 +115,7 @@ export default function AddProcedureScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="DD/MM/AAAA"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={performedAt}
               onChangeText={(t) => { setPerformedAt(formatDateInput(t)); setError(null); }}
               keyboardType="numeric"
@@ -129,7 +129,7 @@ export default function AddProcedureScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Nome do veterinário"
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={vetName}
               onChangeText={setVetName}
             />
@@ -141,7 +141,7 @@ export default function AddProcedureScreen() {
             <TextInput
               className="border border-sage-200 rounded-xl px-4 py-3 text-sage-800 bg-sage-50"
               placeholder="Detalhes, resultados, observações..."
-              placeholderTextColor="#a8c5ad"
+              placeholderTextColor="#60b880"
               value={description}
               onChangeText={setDescription}
               multiline
