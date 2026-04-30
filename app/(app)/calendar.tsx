@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ExpoCalendar from "expo-calendar";
-import { Calendar } from "react-native-calendars";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO } from "@/lib/utils";
@@ -115,18 +114,15 @@ interface DayEvent {
   type: "vaccine" | "medication" | "procedure" | "reminder";
 }
 
-interface MarkedDay {
-  dots: { key: string; color: string }[];
-  selected?: boolean;
-  selectedColor?: string;
-}
-
 const DOT_COLORS: Record<string, string> = {
   vaccine:    "#3b82f6",
   medication: "#f59e0b",
   procedure:  "#a855f7",
   reminder:   "#7da87b",
 };
+
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const WEEK_DAYS = ["D","S","T","Q","Q","S","S"];
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
 
@@ -148,10 +144,11 @@ export default function CalendarScreen() {
   const [timelineLoading, setTimelineLoading] = useState(true);
 
   // ── Month panel ────────────────────────────────────────────────────────────
-  const [markedDates, setMarkedDates] = useState<Record<string, MarkedDay>>({});
   const [dayEvents, setDayEvents] = useState<Record<string, DayEvent[]>>({});
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [monthLoading, setMonthLoading] = useState(true);
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
 
   useFocusEffect(
     useCallback(() => {
@@ -186,67 +183,45 @@ export default function CalendarScreen() {
 
   async function fetchMonthData() {
     setMonthLoading(true);
-    const { map: petMap, ids: petIds } = await getPetMap();
-    if (petIds.length === 0) { setMarkedDates({}); setDayEvents({}); setMonthLoading(false); return; }
+    try {
+      const { map: petMap, ids: petIds } = await getPetMap();
+      if (petIds.length === 0) { setDayEvents({}); setMonthLoading(false); return; }
 
-    const [vacRes, medRes, procRes, remRes] = await Promise.all([
-      supabase.from("vaccines").select("pet_id, name, applied_at, next_dose_at").in("pet_id", petIds),
-      supabase.from("medications").select("pet_id, name, started_at, ends_at").in("pet_id", petIds),
-      supabase.from("procedures").select("pet_id, title, performed_at").in("pet_id", petIds),
-      supabase.from("reminders").select("pet_id, title, scheduled_date").in("pet_id", petIds).eq("enabled", true),
-    ]);
+      const [vacRes, medRes, procRes, remRes] = await Promise.all([
+        supabase.from("vaccines").select("pet_id, name, applied_at, next_dose_at").in("pet_id", petIds),
+        supabase.from("medications").select("pet_id, name, started_at, ends_at").in("pet_id", petIds),
+        supabase.from("procedures").select("pet_id, title, performed_at").in("pet_id", petIds),
+        supabase.from("reminders").select("pet_id, title, scheduled_date").in("pet_id", petIds).eq("enabled", true),
+      ]);
 
-    const evMap: Record<string, DayEvent[]> = {};
+      const evMap: Record<string, DayEvent[]> = {};
+      function addDay(date: string, ev: DayEvent) {
+        const d = (date ?? "").split("T")[0];
+        if (!d) return;
+        if (!evMap[d]) evMap[d] = [];
+        evMap[d].push(ev);
+      }
 
-    function addDay(date: string, ev: DayEvent) {
-      const d = date.split("T")[0];
-      if (!evMap[d]) evMap[d] = [];
-      evMap[d].push(ev);
-    }
-
-    (vacRes.data ?? []).forEach((v) => {
-      addDay(v.applied_at, { title: v.name, petName: petMap[v.pet_id] ?? "", type: "vaccine" });
-      if (v.next_dose_at) addDay(v.next_dose_at, { title: `Próxima dose: ${v.name}`, petName: petMap[v.pet_id] ?? "", type: "vaccine" });
-    });
-    (medRes.data ?? []).forEach((m) => {
-      addDay(m.started_at, { title: m.name, petName: petMap[m.pet_id] ?? "", type: "medication" });
-      if (m.ends_at) addDay(m.ends_at, { title: `Fim: ${m.name}`, petName: petMap[m.pet_id] ?? "", type: "medication" });
-    });
-    (procRes.data ?? []).forEach((p) => addDay(p.performed_at, { title: p.title, petName: petMap[p.pet_id] ?? "", type: "procedure" }));
-    (remRes.data ?? []).forEach((r) => addDay(r.scheduled_date, { title: r.title, petName: petMap[r.pet_id] ?? "", type: "reminder" }));
-
-    // Build marked dates
-    const marked: Record<string, MarkedDay> = {};
-    Object.entries(evMap).forEach(([date, evs]) => {
-      const seen = new Set<string>();
-      const dots: { key: string; color: string }[] = [];
-      evs.forEach((e) => {
-        if (!seen.has(e.type)) {
-          seen.add(e.type);
-          dots.push({ key: e.type, color: DOT_COLORS[e.type] });
-        }
+      (vacRes.data ?? []).forEach((v) => {
+        addDay(v.applied_at, { title: v.name, petName: petMap[v.pet_id] ?? "", type: "vaccine" });
+        if (v.next_dose_at) addDay(v.next_dose_at, { title: `Próxima dose: ${v.name}`, petName: petMap[v.pet_id] ?? "", type: "vaccine" });
       });
-      marked[date] = { dots };
-    });
+      (medRes.data ?? []).forEach((m) => {
+        addDay(m.started_at, { title: m.name, petName: petMap[m.pet_id] ?? "", type: "medication" });
+        if (m.ends_at) addDay(m.ends_at, { title: `Fim: ${m.name}`, petName: petMap[m.pet_id] ?? "", type: "medication" });
+      });
+      (procRes.data ?? []).forEach((p) => addDay(p.performed_at, { title: p.title, petName: petMap[p.pet_id] ?? "", type: "procedure" }));
+      (remRes.data ?? []).forEach((r) => addDay(r.scheduled_date, { title: r.title, petName: petMap[r.pet_id] ?? "", type: "reminder" }));
 
-    setDayEvents(evMap);
-    setMarkedDates(marked);
+      setDayEvents(evMap);
+    } catch (e) {
+      console.error("[fetchMonthData]", e);
+    }
     setMonthLoading(false);
   }
 
   function selectDay(day: string) {
-    setSelectedDay((prev) => {
-      const next = prev === day ? null : day;
-      setMarkedDates((m) => {
-        const updated = { ...m };
-        if (prev && updated[prev]) updated[prev] = { ...updated[prev], selected: false };
-        if (next) {
-          updated[next] = { ...(updated[next] ?? { dots: [] }), selected: true, selectedColor: "#7da87b" };
-        }
-        return updated;
-      });
-      return next;
-    });
+    setSelectedDay((prev) => prev === day ? null : day);
   }
 
   // ── fetchEvents ────────────────────────────────────────────────────────────
@@ -472,67 +447,37 @@ export default function CalendarScreen() {
 
       ) : panel === "month" ? (
         <FlatList
-          data={selectedDay && dayEvents[selectedDay] ? dayEvents[selectedDay] : []}
+          data={selectedDay ? (dayEvents[selectedDay] ?? []) : []}
           keyExtractor={(_, i) => String(i)}
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View>
-              <Calendar
-                markingType="multi-dot"
-                markedDates={markedDates}
-                onDayPress={(day: { dateString: string }) => selectDay(day.dateString)}
-                theme={{
-                  backgroundColor: "transparent",
-                  calendarBackground: "#ffffff",
-                  textSectionTitleColor: "#7da87b",
-                  selectedDayBackgroundColor: "#7da87b",
-                  selectedDayTextColor: "#ffffff",
-                  todayTextColor: "#527558",
-                  dayTextColor: "#2d4a30",
-                  textDisabledColor: "#c8deca",
-                  dotColor: "#7da87b",
-                  selectedDotColor: "#ffffff",
-                  arrowColor: "#7da87b",
-                  monthTextColor: "#2d4a30",
-                  textDayFontWeight: "400",
-                  textMonthFontWeight: "700",
-                  textDayHeaderFontWeight: "600",
-                }}
-                style={{ marginHorizontal: 20, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}
+              <MonthGrid
+                year={currentMonth.year}
+                month={currentMonth.month}
+                todayStr={new Date().toISOString().split("T")[0]}
+                dayEvents={dayEvents}
+                selectedDay={selectedDay}
+                loading={monthLoading}
+                onSelectDay={selectDay}
+                onPrevMonth={() => setCurrentMonth(({ year, month }) =>
+                  month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 }
+                )}
+                onNextMonth={() => setCurrentMonth(({ year, month }) =>
+                  month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 }
+                )}
               />
-              {monthLoading && (
-                <View className="items-center py-4">
-                  <ActivityIndicator color="#7da87b" />
-                </View>
-              )}
               {selectedDay && (
-                <View className="px-5 mb-2">
+                <View className="px-5 mb-2 mt-1">
                   <Text className="text-xs font-semibold text-sage-500 uppercase tracking-wide">
                     {formatDateISO(selectedDay)}
                   </Text>
                 </View>
               )}
               {selectedDay && !dayEvents[selectedDay]?.length && (
-                <View className="items-center py-6 px-8">
-                  <Text className="text-sage-300 text-sm text-center">Nenhum evento neste dia.</Text>
-                </View>
-              )}
-              {!selectedDay && !monthLoading && (
-                <View className="items-center py-4 px-8">
-                  <Text className="text-sage-300 text-sm text-center">
-                    Toque em um dia para ver os eventos.{"\n"}Pontos coloridos indicam dias com eventos.
-                  </Text>
-                  <View className="flex-row gap-4 mt-3 flex-wrap justify-center">
-                    {Object.entries(DOT_COLORS).map(([type, color]) => (
-                      <View key={type} className="flex-row items-center gap-1.5">
-                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-                        <Text className="text-sage-400 text-xs capitalize">
-                          {type === "vaccine" ? "Vacina" : type === "medication" ? "Medicamento" : type === "procedure" ? "Procedimento" : "Lembrete"}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+                <View className="items-center py-4">
+                  <Text className="text-sage-300 text-sm">Nenhum evento neste dia.</Text>
                 </View>
               )}
             </View>
@@ -542,12 +487,12 @@ export default function CalendarScreen() {
             const typeLabel = item.type === "vaccine" ? "Vacina" : item.type === "medication" ? "Medicamento" : item.type === "procedure" ? "Procedimento" : "Lembrete";
             return (
               <View className="bg-white rounded-2xl p-4 mb-2 mx-5 shadow-sm flex-row items-start gap-3">
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color, marginTop: 5 }} />
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, marginTop: 4 }} />
                 <View className="flex-1">
                   <Text className="text-sage-800 font-medium text-sm">{item.title}</Text>
                   <View className="flex-row items-center gap-2 mt-0.5">
                     <Text className="text-sage-400 text-xs">{item.petName}</Text>
-                    <Text className="text-sage-200 text-xs">·</Text>
+                    <Text className="text-sage-300 text-xs">·</Text>
                     <Text className="text-sage-400 text-xs">{typeLabel}</Text>
                   </View>
                 </View>
@@ -733,5 +678,126 @@ export default function CalendarScreen() {
         )
       )}
     </SafeAreaView>
+  );
+}
+
+// ─── MonthGrid ───────────────────────────────────────────────────────────────
+
+function chunkWeeks<T>(arr: T[]): T[][] {
+  const weeks: T[][] = [];
+  for (let i = 0; i < arr.length; i += 7) weeks.push(arr.slice(i, i + 7));
+  return weeks;
+}
+
+function MonthGrid({ year, month, todayStr, dayEvents, selectedDay, loading, onSelectDay, onPrevMonth, onNextMonth }: {
+  year: number;
+  month: number;
+  todayStr: string;
+  dayEvents: Record<string, DayEvent[]>;
+  selectedDay: string | null;
+  loading: boolean;
+  onSelectDay: (day: string) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+}) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = chunkWeeks(cells);
+
+  return (
+    <View className="bg-white rounded-2xl mx-5 mb-3 p-4 shadow-sm">
+      {/* Header */}
+      <View className="flex-row items-center justify-between mb-3">
+        <TouchableOpacity onPress={onPrevMonth} hitSlop={8} className="p-1">
+          <Ionicons name="chevron-back" size={20} color="#527558" />
+        </TouchableOpacity>
+        <Text className="text-sage-800 font-bold text-base">
+          {MONTH_NAMES[month]} {year}
+        </Text>
+        <TouchableOpacity onPress={onNextMonth} hitSlop={8} className="p-1">
+          <Ionicons name="chevron-forward" size={20} color="#527558" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Day-of-week headers */}
+      <View className="flex-row mb-1">
+        {WEEK_DAYS.map((d, i) => (
+          <View key={i} style={{ flex: 1 }} className="items-center">
+            <Text className="text-sage-400 text-xs font-semibold">{d}</Text>
+          </View>
+        ))}
+      </View>
+
+      {loading ? (
+        <View className="py-8 items-center">
+          <ActivityIndicator color="#7da87b" />
+        </View>
+      ) : (
+        <>
+          {weeks.map((week, wi) => (
+            <View key={wi} className="flex-row">
+              {week.map((day, di) => {
+                if (!day) return <View key={di} style={{ flex: 1, minHeight: 44 }} />;
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedDay;
+                const evTypes = Array.from(new Set((dayEvents[dateStr] ?? []).map((e) => e.type)));
+
+                return (
+                  <TouchableOpacity
+                    key={di}
+                    style={{ flex: 1, minHeight: 44 }}
+                    className="items-center py-1"
+                    onPress={() => onSelectDay(dateStr)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{
+                      width: 32, height: 32, borderRadius: 16,
+                      alignItems: "center", justifyContent: "center",
+                      backgroundColor: isSelected ? "#7da87b" : isToday ? "#e6ede7" : "transparent",
+                    }}>
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: isSelected || isToday ? "700" : "400",
+                        color: isSelected ? "#fff" : isToday ? "#527558" : "#2d4a30",
+                      }}>
+                        {day}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 2, height: 6, marginTop: 1 }}>
+                      {evTypes.slice(0, 3).map((type) => (
+                        <View key={type} style={{
+                          width: 5, height: 5, borderRadius: 3,
+                          backgroundColor: DOT_COLORS[type],
+                        }} />
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+
+          {/* Legenda */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 12, justifyContent: "center" }}>
+            {Object.entries(DOT_COLORS).map(([type, color]) => (
+              <View key={type} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
+                <Text style={{ fontSize: 11, color: "#a8c5ad" }}>
+                  {type === "vaccine" ? "Vacina" : type === "medication" ? "Medicamento" : type === "procedure" ? "Procedimento" : "Lembrete"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
   );
 }
