@@ -110,10 +110,8 @@ export default function PetDetailScreen() {
 
 
   function getEmergencyUrl() {
-    const base = process.env.EXPO_PUBLIC_SUPABASE_URL?.includes("supabase.co")
-      ? "https://augenda.app"
-      : "http://localhost:8081";
-    return `${base}/emergency/${id}`;
+    const appUrl = process.env.EXPO_PUBLIC_APP_URL ?? "https://velvety-liger-3bd88f.netlify.app";
+    return `${appUrl}/emergency/${id}`;
   }
 
   async function shareEmergencyCard() {
