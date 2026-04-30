@@ -81,6 +81,7 @@ export interface Medication {
   ends_at?: string;
   notes?: string;
   active: boolean;
+  restock_reminder_days?: number | null;
   created_at: string;
 }
 

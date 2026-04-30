@@ -114,6 +114,17 @@ Tasks simples e bem definidas. Usar quando:
 
 ---
 
+### P2 — Melhoria (continuação)
+
+| Tipo | Epic | Item | Status |
+|------|------|------|--------|
+| Produto | Epic 11 | **Lembrete de recompra de medicamento** — ao cadastrar med, opção de lembrar quando estiver acabando | [ ] |
+| Produto | Epic 11 | **Busca no Mercado Livre** — a partir do lembrete de recompra, buscar produto no ML e adicionar ao carrinho | [ ] |
+
+**Notas Epic 11 (Recompra):** Adicionar campo `restock_reminder_days` (int, nullable) no cadastro de medicamento. Quando preenchido, calcular data de alerta = `ends_at - restock_reminder_days` e criar um reminder automático. Para busca ML: usar ML Search API (`https://api.mercadolibre.com/sites/MLB/search?q=<nome_med>`) — retorna lista de produtos. UI: modal com resultados + botão "Ver no Mercado Livre" que abre a URL do produto (`product.permalink`). Adicionar ao carrinho requer OAuth ML — por ora, abrir o produto no browser e deixar o usuário adicionar.
+
+---
+
 ### P3 — Futuro
 
 | Tipo | Epic | Item | Status |

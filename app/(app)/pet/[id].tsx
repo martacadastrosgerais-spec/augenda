@@ -11,6 +11,7 @@ import {
   Platform,
   Share,
   TextInput,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,16 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition } from "@/types";
+
+interface MlProduct {
+  id: string;
+  title: string;
+  price: number;
+  currency_id: string;
+  thumbnail: string;
+  permalink: string;
+  condition: string;
+}
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
 const SEVERITY_CONFIG = {
@@ -56,6 +67,9 @@ export default function PetDetailScreen() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [mlQuery, setMlQuery] = useState<string | null>(null);
+  const [mlResults, setMlResults] = useState<MlProduct[]>([]);
+  const [mlLoading, setMlLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -113,6 +127,21 @@ export default function PetDetailScreen() {
     } else {
       Share.share({ message: `Cartão de emergência de ${pet?.name}: ${url}` });
     }
+  }
+
+  async function openMlSearch(medName: string) {
+    setMlQuery(medName);
+    setMlResults([]);
+    setMlLoading(true);
+    try {
+      const encoded = encodeURIComponent(medName);
+      const res = await fetch(`https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=10`);
+      const json = await res.json();
+      setMlResults((json.results ?? []) as MlProduct[]);
+    } catch {
+      setMlResults([]);
+    }
+    setMlLoading(false);
   }
 
   async function saveCondition() {
@@ -421,16 +450,25 @@ export default function PetDetailScreen() {
                     </View>
                   )}
                   {item.active && (
-                    <TouchableOpacity
-                      onPress={() => router.push({
-                        pathname: `/(app)/pet/${id}/add-dose` as any,
-                        params: { medicationId: item.id, medicationName: item.name },
-                      })}
-                      className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
-                    >
-                      <Ionicons name="add-circle-outline" size={14} color="#165c39" />
-                      <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
-                    </TouchableOpacity>
+                    <View className="flex-row gap-2 mt-2">
+                      <TouchableOpacity
+                        onPress={() => router.push({
+                          pathname: `/(app)/pet/${id}/add-dose` as any,
+                          params: { medicationId: item.id, medicationName: item.name },
+                        })}
+                        className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                      >
+                        <Ionicons name="add-circle-outline" size={14} color="#165c39" />
+                        <Text className="text-sage-600 text-xs font-medium">Registrar dose</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => openMlSearch(item.name)}
+                        className="flex-1 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                      >
+                        <Ionicons name="cart-outline" size={14} color="#165c39" />
+                        <Text className="text-sage-600 text-xs font-medium">Comprar</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </View>
               ))
@@ -525,6 +563,76 @@ export default function PetDetailScreen() {
       </View>
 
       </ScrollView>
+
+      {/* Mercado Livre modal */}
+      <Modal
+        visible={mlQuery !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMlQuery(null)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-white rounded-t-3xl" style={{ maxHeight: "85%" }}>
+            <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-sage-100">
+              <View className="flex-1">
+                <Text className="text-sage-800 font-bold text-base">Mercado Livre</Text>
+                <Text className="text-sage-400 text-xs" numberOfLines={1}>{mlQuery}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setMlQuery(null)} hitSlop={8}>
+                <Ionicons name="close" size={22} color="#165c39" />
+              </TouchableOpacity>
+            </View>
+
+            {mlLoading ? (
+              <View className="py-12 items-center">
+                <ActivityIndicator color="#32a060" size="large" />
+                <Text className="text-sage-400 text-sm mt-3">Buscando produtos...</Text>
+              </View>
+            ) : mlResults.length === 0 ? (
+              <View className="py-12 items-center px-6">
+                <Text className="text-3xl mb-3">🛒</Text>
+                <Text className="text-sage-500 text-center">Nenhum produto encontrado para "{mlQuery}".</Text>
+              </View>
+            ) : (
+              <ScrollView className="px-4 pt-2 pb-4" showsVerticalScrollIndicator={false}>
+                {mlResults.map((product) => (
+                  <TouchableOpacity
+                    key={product.id}
+                    onPress={() => Linking.openURL(product.permalink)}
+                    className="flex-row items-center bg-white border border-sage-100 rounded-2xl p-3 mb-2"
+                    activeOpacity={0.75}
+                  >
+                    {product.thumbnail ? (
+                      <Image
+                        source={{ uri: product.thumbnail.replace("http://", "https://") }}
+                        className="w-14 h-14 rounded-xl bg-sage-50"
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View className="w-14 h-14 rounded-xl bg-sage-50 items-center justify-center">
+                        <Ionicons name="medical-outline" size={24} color="#60b880" />
+                      </View>
+                    )}
+                    <View className="flex-1 ml-3">
+                      <Text className="text-sage-800 text-sm font-medium leading-snug" numberOfLines={2}>
+                        {product.title}
+                      </Text>
+                      <Text className="text-sage-600 font-bold text-sm mt-1">
+                        R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </Text>
+                      {product.condition === "new" && (
+                        <Text className="text-sage-400 text-xs">Novo</Text>
+                      )}
+                    </View>
+                    <Ionicons name="open-outline" size={16} color="#60b880" />
+                  </TouchableOpacity>
+                ))}
+                <View className="pb-4" />
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* QR Code modal */}
       <Modal
