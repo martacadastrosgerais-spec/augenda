@@ -59,7 +59,9 @@ async function callClaudeVision(base64: string, mediaType: string): Promise<Extr
           },
           {
             type: "text",
-            text: `Esta é uma foto de carteira de vacinação de pet. Extraia TODAS as vacinas visíveis.
+            text: `Esta é uma foto de carteira de vacinação de pet brasileira. Extraia TODAS as vacinas visíveis.
+
+IMPORTANTE: As datas estão no formato brasileiro DD/MM/AAAA (dia/mês/ano). Por exemplo, "04/08/2019" significa dia 4 de agosto de 2019. Converta para ISO YYYY-MM-DD respeitando essa ordem: o primeiro número é o DIA, o segundo é o MÊS.
 
 Retorne APENAS um array JSON válido, sem nenhum texto adicional, markdown ou código. Formato:
 [
