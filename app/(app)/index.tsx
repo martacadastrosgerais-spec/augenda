@@ -146,8 +146,8 @@ export default function PetsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#32a060" size="large" />
+      <SafeAreaView className="flex-1 bg-sage-700 items-center justify-center">
+        <ActivityIndicator color="#fff" size="large" />
       </SafeAreaView>
     );
   }
@@ -158,15 +158,16 @@ export default function PetsScreen() {
   const hasAlerts = alerts.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-sage-700">Meus Pets</Text>
+    <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
+      {/* Header verde escuro */}
+      <View className="bg-sage-700 px-5 pt-4 pb-5 flex-row items-center justify-between">
+        <Text className="text-2xl font-bold text-white">Meus Pets</Text>
         <View className="flex-row gap-2">
           <TouchableOpacity
-            className="border border-sage-300 rounded-full w-10 h-10 items-center justify-center"
+            className="border border-sage-500 rounded-full w-10 h-10 items-center justify-center"
             onPress={() => router.push("/(app)/join")}
           >
-            <Ionicons name="enter-outline" size={20} color="#32a060" />
+            <Ionicons name="enter-outline" size={20} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
             className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
@@ -177,92 +178,93 @@ export default function PetsScreen() {
         </View>
       </View>
 
-      <FormError message={error} />
+      {/* Conteúdo com fundo claro arredondado */}
+      <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
+        <FormError message={error} />
 
-      {/* Dashboard de alertas */}
-      {hasAlerts && (
-        <View className="mb-2">
-          {/* Contadores */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }} className="mb-3">
-            {overdue.length > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push("/(app)/calendar")}
-                className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-              >
-                <Ionicons name="alert-circle" size={18} color="#ef4444" />
-                <View>
-                  <Text className="text-red-600 font-bold text-sm">{overdue.length} atrasado{overdue.length > 1 ? "s" : ""}</Text>
-                  <Text className="text-red-400 text-xs">Atenção necessária</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {today.length > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push("/(app)/calendar")}
-                className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-              >
-                <Ionicons name="today-outline" size={18} color="#d97706" />
-                <View>
-                  <Text className="text-amber-700 font-bold text-sm">{today.length} hoje</Text>
-                  <Text className="text-amber-500 text-xs">Neste momento</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {soon.length > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push("/(app)/calendar")}
-                className="bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
-              >
-                <Ionicons name="calendar-outline" size={18} color="#32a060" />
-                <View>
-                  <Text className="text-sage-600 font-bold text-sm">{soon.length} em breve</Text>
-                  <Text className="text-sage-400 text-xs">Próximos 7 dias</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-
-          {/* Itens urgentes (vencidos + hoje) */}
-          {[...overdue, ...today].length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
-              {[...overdue, ...today].map((item) => {
-                const isOverdue = item.urgency === "overdue";
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => router.push("/(app)/calendar")}
-                    className={`rounded-2xl p-4 min-w-48 ${isOverdue ? "bg-red-500" : "bg-amber-400"}`}
-                  >
-                    <Text className="text-white text-xs font-medium mb-1 opacity-90">{item.petName}</Text>
-                    <Text className="text-white font-semibold text-sm leading-tight">{item.title}</Text>
-                    <Text className={`text-xs mt-2 ${isOverdue ? "text-red-100" : "text-amber-100"}`}>
-                      {isOverdue ? `Venceu em ${formatDateISO(item.date)}` : "Hoje"}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
-      )}
-
-      {/* Lista de pets */}
-      {pets.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-5xl mb-4">🐾</Text>
-          <Text className="text-xl font-semibold text-sage-600 text-center">
-            Nenhum pet cadastrado ainda
-          </Text>
-          <Text className="text-sage-400 text-center mt-2">
-            Toque no + para adicionar ou use o código de um tutor
-          </Text>
-        </View>
-      ) : (
         <FlatList
           data={pets}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            hasAlerts ? (
+              <View className="mb-3">
+                {/* Contadores */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }} className="mb-3">
+                  {overdue.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => router.push("/(app)/calendar")}
+                      className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+                    >
+                      <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                      <View>
+                        <Text className="text-red-600 font-bold text-sm">{overdue.length} atrasado{overdue.length > 1 ? "s" : ""}</Text>
+                        <Text className="text-red-400 text-xs">Atenção necessária</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  {today.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => router.push("/(app)/calendar")}
+                      className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+                    >
+                      <Ionicons name="today-outline" size={18} color="#d97706" />
+                      <View>
+                        <Text className="text-amber-700 font-bold text-sm">{today.length} hoje</Text>
+                        <Text className="text-amber-500 text-xs">Neste momento</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  {soon.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => router.push("/(app)/calendar")}
+                      className="bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 flex-row items-center gap-2"
+                    >
+                      <Ionicons name="calendar-outline" size={18} color="#32a060" />
+                      <View>
+                        <Text className="text-sage-600 font-bold text-sm">{soon.length} em breve</Text>
+                        <Text className="text-sage-400 text-xs">Próximos 7 dias</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+
+                {/* Itens urgentes */}
+                {[...overdue, ...today].length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                    {[...overdue, ...today].map((item) => {
+                      const isOverdue = item.urgency === "overdue";
+                      return (
+                        <TouchableOpacity
+                          key={item.id}
+                          onPress={() => router.push("/(app)/calendar")}
+                          className={`rounded-2xl p-4 min-w-48 ${isOverdue ? "bg-red-500" : "bg-amber-400"}`}
+                        >
+                          <Text className="text-white text-xs font-medium mb-1 opacity-90">{item.petName}</Text>
+                          <Text className="text-white font-semibold text-sm leading-tight">{item.title}</Text>
+                          <Text className={`text-xs mt-2 ${isOverdue ? "text-red-100" : "text-amber-100"}`}>
+                            {isOverdue ? `Venceu em ${formatDateISO(item.date)}` : "Hoje"}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View className="items-center justify-center px-8 mt-16">
+              <Text className="text-5xl mb-4">🐾</Text>
+              <Text className="text-xl font-semibold text-sage-600 text-center">
+                Nenhum pet cadastrado ainda
+              </Text>
+              <Text className="text-sage-400 text-center mt-2">
+                Toque no + para adicionar ou use o código de um tutor
+              </Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               className="bg-white rounded-2xl p-4 mb-3 flex-row items-center shadow-sm"
@@ -296,7 +298,7 @@ export default function PetsScreen() {
             </TouchableOpacity>
           )}
         />
-      )}
+      </View>
     </SafeAreaView>
   );
 }

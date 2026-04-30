@@ -176,8 +176,8 @@ export default function PetDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-cream items-center justify-center">
-        <ActivityIndicator color="#32a060" size="large" />
+      <SafeAreaView className="flex-1 bg-sage-700 items-center justify-center">
+        <ActivityIndicator color="#fff" size="large" />
       </SafeAreaView>
     );
   }
@@ -187,19 +187,18 @@ export default function PetDetailScreen() {
   const SPECIES_ICON = pet.species === "dog" ? "🐶" : "🐱";
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      {/* Header */}
-      <View className="px-5 pt-4 pb-2 flex-row items-center">
+    <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
+      {/* Header verde escuro */}
+      <View className="bg-sage-700 px-5 pt-4 pb-5 flex-row items-center">
         <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color="#165c39" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-sage-700 flex-1">{pet.name}</Text>
+        <Text className="text-xl font-bold text-white flex-1">{pet.name}</Text>
         {user?.id === pet.user_id && (
           <View className="flex-row items-center gap-1">
             {confirmDelete ? (
               <>
-                <Text className="text-sage-500 text-xs mr-1">Deletar?</Text>
+                <Text className="text-sage-300 text-xs mr-1">Deletar?</Text>
                 <TouchableOpacity
                   onPress={handleDelete}
                   disabled={deleting}
@@ -211,27 +210,30 @@ export default function PetDetailScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setConfirmDelete(false)}
-                  className="border border-sage-300 rounded-lg px-3 py-1"
+                  className="border border-sage-500 rounded-lg px-3 py-1"
                 >
-                  <Text className="text-sage-600 text-xs font-semibold">Não</Text>
+                  <Text className="text-white text-xs font-semibold">Não</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
-                  <Ionicons name="create-outline" size={22} color="#165c39" />
+                  <Ionicons name="create-outline" size={22} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1">
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                  <Ionicons name="trash-outline" size={22} color="#fca5a5" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
-                  <Ionicons name="people-outline" size={22} color="#165c39" />
+                  <Ionicons name="people-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               </>
             )}
           </View>
         )}
       </View>
+
+      <ScrollView className="flex-1 bg-cream rounded-t-3xl" style={{ marginTop: -12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <View style={{ height: 16 }} />
 
       {/* Pet info card */}
       <View className="mx-5 bg-white rounded-2xl p-5 shadow-sm mb-4">

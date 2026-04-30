@@ -113,15 +113,15 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <View className="px-5 pt-4 pb-2">
-        <Text className="text-2xl font-bold text-sage-700">Perfil</Text>
+    <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
+      <View className="bg-sage-700 px-5 pt-4 pb-5">
+        <Text className="text-2xl font-bold text-white">Perfil</Text>
       </View>
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 bg-cream rounded-t-3xl px-5 pt-6" style={{ marginTop: -12 }} showsVerticalScrollIndicator={false}>
 
         {/* Info da conta */}
-        <View className="bg-white rounded-2xl p-5 shadow-sm mt-4">
+        <View className="bg-white rounded-2xl p-5 shadow-sm">
           <View className="flex-row items-center mb-4">
             <View className="w-14 h-14 rounded-full bg-sage-100 items-center justify-center">
               <Text className="text-2xl">

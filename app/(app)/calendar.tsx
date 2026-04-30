@@ -408,11 +408,12 @@ export default function CalendarScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
+    <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
+      {/* Header verde escuro */}
+      <View className="bg-sage-700 px-5 pt-4 pb-5 flex-row items-center justify-between">
         <View>
-          <Text className="text-2xl font-bold text-sage-700">Agenda</Text>
-          <Text className="text-sage-400 text-sm">{PANEL_LABELS[panel]}</Text>
+          <Text className="text-2xl font-bold text-white">Agenda</Text>
+          <Text className="text-sage-300 text-sm">{PANEL_LABELS[panel]}</Text>
         </View>
         <TouchableOpacity
           className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
@@ -422,8 +423,11 @@ export default function CalendarScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Conteúdo claro arredondado */}
+      <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
+
       {/* Panel toggle — 4 abas */}
-      <View className="flex-row mx-5 bg-white rounded-2xl p-1 shadow-sm mb-3">
+      <View className="flex-row mx-5 mt-4 bg-white rounded-2xl p-1 shadow-sm mb-3">
         {(["month", "events", "reminders", "timeline"] as Panel[]).map((p) => {
           const active = panel === p;
           return (
@@ -677,6 +681,7 @@ export default function CalendarScreen() {
           />
         )
       )}
+      </View>
     </SafeAreaView>
   );
 }
