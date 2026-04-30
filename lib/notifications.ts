@@ -19,6 +19,28 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return status === "granted";
 }
 
+export async function getNotificationPermissionStatus(): Promise<"granted" | "denied" | "undetermined" | "web"> {
+  if (Platform.OS === "web") return "web";
+  const { status } = await Notifications.getPermissionsAsync();
+  return status as "granted" | "denied" | "undetermined";
+}
+
+export async function sendTestNotification(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const granted = await requestNotificationPermissions();
+  if (!granted) return false;
+  const fiveSeconds = new Date(Date.now() + 5000);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "AUgenda — Notificação de teste",
+      body: "As notificações estão funcionando!",
+      sound: true,
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fiveSeconds },
+  });
+  return true;
+}
+
 export async function scheduleLocalReminder(opts: {
   title: string;
   body: string;

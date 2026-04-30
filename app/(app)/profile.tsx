@@ -15,6 +15,11 @@ import { useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { FormError } from "@/components/FormError";
+import {
+  getNotificationPermissionStatus,
+  requestNotificationPermissions,
+  sendTestNotification,
+} from "@/lib/notifications";
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -32,6 +37,10 @@ export default function ProfileScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  const [notifStatus, setNotifStatus] = useState<"granted" | "denied" | "undetermined" | "web" | null>(null);
+  const [testingNotif, setTestingNotif] = useState(false);
+  const [testSent, setTestSent] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       setName(user?.user_metadata?.name ?? "");
@@ -41,8 +50,23 @@ export default function ProfileScreen() {
       setPasswordSuccess(false);
       setNewPassword("");
       setConfirmPassword("");
+      setTestSent(false);
+      getNotificationPermissionStatus().then(setNotifStatus);
     }, [user])
   );
+
+  async function handleEnableNotifications() {
+    const granted = await requestNotificationPermissions();
+    setNotifStatus(granted ? "granted" : "denied");
+  }
+
+  async function handleTestNotification() {
+    setTestingNotif(true);
+    const sent = await sendTestNotification();
+    setTestingNotif(false);
+    if (sent) setTestSent(true);
+    else setNotifStatus("denied");
+  }
 
   async function handleSaveName() {
     setNameError(null);
@@ -187,6 +211,74 @@ export default function ProfileScreen() {
                   : <Text className="text-white font-semibold">Alterar senha</Text>}
               </TouchableOpacity>
             </>
+          )}
+        </View>
+
+        {/* Notificações */}
+        <View className="bg-white rounded-2xl p-5 shadow-sm mt-3">
+          <View className="flex-row items-center gap-2 mb-3">
+            <Ionicons name="notifications-outline" size={20} color="#165c39" />
+            <Text className="text-base font-semibold text-sage-700">Notificações</Text>
+          </View>
+
+          {notifStatus === "web" && (
+            <View className="bg-sage-50 rounded-xl p-3">
+              <Text className="text-sage-500 text-sm text-center">
+                Notificações locais funcionam apenas no app móvel (iOS/Android).
+              </Text>
+            </View>
+          )}
+
+          {notifStatus === "granted" && (
+            <View>
+              <View className="flex-row items-center gap-2 mb-3">
+                <View className="w-6 h-6 rounded-full bg-green-100 items-center justify-center">
+                  <Ionicons name="checkmark" size={13} color="#16a34a" />
+                </View>
+                <Text className="text-green-700 text-sm font-medium">Notificações ativadas</Text>
+              </View>
+              {testSent ? (
+                <View className="bg-green-50 border border-green-200 rounded-xl p-3 flex-row items-center gap-2">
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#16a34a" />
+                  <Text className="text-green-700 text-sm">Notificação enviada! Aguarde 5 segundos.</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  className="border border-sage-200 rounded-xl py-3 items-center"
+                  onPress={handleTestNotification}
+                  disabled={testingNotif}
+                >
+                  {testingNotif
+                    ? <ActivityIndicator size="small" color="#32a060" />
+                    : <Text className="text-sage-600 text-sm font-medium">Enviar notificação de teste</Text>}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {(notifStatus === "denied" || notifStatus === "undetermined") && (
+            <View>
+              <View className="flex-row items-center gap-2 mb-3">
+                <View className="w-6 h-6 rounded-full bg-amber-100 items-center justify-center">
+                  <Ionicons name="warning-outline" size={13} color="#d97706" />
+                </View>
+                <Text className="text-amber-700 text-sm font-medium">
+                  {notifStatus === "denied" ? "Notificações bloqueadas" : "Notificações não ativadas"}
+                </Text>
+              </View>
+              {notifStatus === "denied" ? (
+                <Text className="text-sage-400 text-xs">
+                  Para receber lembretes, ative as notificações nas configurações do dispositivo para o AUgenda.
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  className="bg-sage-400 rounded-xl py-3 items-center"
+                  onPress={handleEnableNotifications}
+                >
+                  <Text className="text-white font-semibold text-sm">Ativar notificações</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
 
