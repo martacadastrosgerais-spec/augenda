@@ -147,6 +147,18 @@ export interface MedicationDose {
   created_at: string;
 }
 
+export type IncidentCategory = "vomit" | "diarrhea" | "wound" | "behavior" | "allergy_reaction" | "other";
+
+export interface Incident {
+  id: string;
+  pet_id: string;
+  occurred_at: string;
+  category: IncidentCategory;
+  description: string;
+  photo_url?: string;
+  created_at: string;
+}
+
 export interface WeightLog {
   id: string;
   pet_id: string;

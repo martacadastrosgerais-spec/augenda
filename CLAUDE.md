@@ -59,14 +59,11 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tipo | Epic | Item | Status |
 |------|------|------|--------|
-| Técnico | Infra | Error boundaries — erros derrubavam o app inteiro | ✅ |
+| Técnico | Infra | Error boundaries | ✅ |
 | Técnico | Infra | `jest-expo` compatível com Expo SDK 54 | ✅ |
-| Produto | Epic 8 | **Cartão de emergência** — perfil público acessível sem login | [ ] |
-| Produto | Epic 8 | Campos pet: sexo, microchip, castrado, alergias, condições crônicas | [ ] |
-| Produto | Epic 8 | Contatos de emergência (tutor + veterinário com telefone) | [ ] |
-| Produto | Epic 8 | URL pública do cartão (sem login) + QR code gerado no app | [ ] |
-
-**Notas Epic 8:** EmergencyProfile entity no banco. URL: `/emergency/[petId]` pública. Exibe: nome, espécie, raça, idade, peso, condições crônicas, medicamentos ativos, veterinário, contato de emergência. Leitura sem auth via RLS policy pública.
+| Produto | Epic 8 | Cartão de emergência público + QR code | ✅ |
+| Produto | Epic 8 | Campos pet: sexo, microchip, castrado, alergias, foto, peso por data | ✅ |
+| Produto | Epic 8 | Contatos de emergência (tutor + veterinário) | ✅ |
 
 ---
 
@@ -74,23 +71,15 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tipo | Epic | Item | Status |
 |------|------|------|--------|
-| Produto | Epic 1 | Tela de Procedimentos (consultas, cirurgias, exames) | ✅ |
-| Produto | Epic 1 | Tela de Perfil (nome do usuário, trocar senha) | ✅ |
-| Produto | Epic 1 | Agenda/Calendário com integração calendário nativo | ✅ |
-| Produto | Epic 9 | **Dashboard "hoje"** — tarefas do dia, atrasadas, próximas 7 dias | [ ] |
-| Produto | Epic 2 | **Timeline unificada** — feed cronológico de todos os eventos de todos os pets | [ ] |
-| Produto | Epic 3 | **Lembretes com recorrência** — vacinas, medicamentos, procedimentos | [ ] |
-| Produto | Epic 3 | Push notifications (FCM/APNs) vinculados aos lembretes | [ ] |
-| Produto | Epic 4 | **Confirmação de dose** — registrar quem administrou e quando cada dose | [ ] |
-| Técnico | Infra | CI/CD com GitHub Actions (rodar testes no push) | [ ] |
+| Produto | Epic 1 | Procedimentos, Perfil, Calendário | ✅ |
+| Produto | Epic 2 | Timeline unificada no calendário | ✅ |
+| Produto | Epic 4 | Confirmação de dose de medicamento | ✅ |
+| Produto | Epic 9 | Dashboard "hoje" com alertas e lembretes | ✅ |
+| Técnico | Infra | CI/CD com GitHub Actions | ✅ |
+| Produto | Epic 3 | Push notifications remotas (FCM/APNs) | [ ] Aguarda `eas init` |
+| Produto | Epic 14 | **Registro de adversidades/incidentes com foto** — vômito, lesão, comportamento anormal | [ ] |
 
-**Notas Epic 9 (Dashboard):** Substituir ou complementar a tela inicial. Mostra: medicamentos a dar hoje, vacinas vencidas/próximas, procedimentos agendados. Usa dados já existentes, sem novo schema.
-
-**Notas Epic 2 (Timeline):** Entidade `HealthEvent` view ou tabela materializada agregando vaccines, medications, procedures. UI: FlatList com badges por tipo, filtro por pet.
-
-**Notas Epic 3 (Lembretes):** Tabela `reminders` (pet_id, type, title, next_at, recurrence_rule, enabled). Recorrência: diária, semanal, mensal, personalizada. Integração com expo-notifications.
-
-**Notas Epic 4 (Doses):** Tabela `medication_doses` (medication_id, administered_at, administered_by, notes). UI: botão "Registrar dose" na tela do medicamento ativo. Histórico de aderência.
+**Notas Epic 14 (Adversidades):** Tutora registra um evento inesperado (vômito, diarreia, ferida, comportamento) com descrição, foto opcional, data/hora e categoria. Objetivo: ter histórico preciso para contar ao veterinário. Tabela `incidents` (pet_id, occurred_at, category, description, photo_url, created_at). Categorias: `vomit | diarrhea | wound | behavior | allergy_reaction | other`. Upload de foto no bucket `pet-incidents` (Supabase Storage). Aparece na timeline do pet e pode ser referenciado no diário clínico.
 
 ---
 
@@ -98,30 +87,23 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tipo | Epic | Item | Status |
 |------|------|------|--------|
-| Produto | Epic 1 | Upload de foto dos pets (Supabase Storage) | [ ] |
-| Produto | Epic 6 | **Diário clínico / log de sintomas** — notas livres com data e hora | [ ] |
-| Produto | Epic 6 | Vincular sintoma a evento existente ou registro standalone | [ ] |
-| Produto | Epic 10 | **Condições crônicas** — cadastro e vinculação a meds/procedimentos | [ ] |
+| Produto | Epic 6 | Diário clínico / log de sintomas | ✅ |
+| Produto | Epic 10 | Condições crônicas | ✅ |
+| Produto | Epic 1 | OCR de carteira de vacinas (Claude Vision) | ✅ |
+| Produto | Epic 11 | Lembrete de recompra de medicamento | ✅ |
+| Produto | Epic 12 | **Controle de banho e tosa** — registro e lembrete recorrente | [ ] |
+| Produto | Epic 11 | **ML Wishlist** — busca real + adicionar à lista de desejos do ML | [ ] Aguarda credenciais ML |
+| Produto | Epic 13 | **Agente conversacional** — cadastro por linguagem natural | [ ] |
 | Produto | Epic 1 | Documentos — upload de exames PDF/foto | [ ] |
-| Produto | Epic 1 | OCR de carteira de vacina (Claude Vision API) | [ ] |
 | Produto | Epic 1 | Arquivar pet (sem deletar histórico) | [ ] |
-| Técnico | Infra | Paginação nas listas de vacinas e medicamentos | [ ] |
+| Técnico | Infra | Paginação nas listas | [ ] |
 | Técnico | Infra | Modo offline básico (cache local) | [ ] |
 
-**Notas Epic 6 (Diário):** Tabela `symptom_logs` (pet_id, noted_at, description, severity, related_event_id?). UI: botão "+" na tela do pet, similar a add-procedure.
+**Notas Epic 12 (Banho e Tosa):** Tabela `grooming_logs` (pet_id, type [`bath`|`grooming`|`both`], performed_at, groomer_name, notes, next_at). UI: aba ou seção na tela do pet. Lembrete recorrente automático baseado em `next_at`. Integra com a tabela `reminders`.
 
-**Notas Epic 10 (Crônicas):** Tabela `chronic_conditions` (pet_id, name, diagnosed_at, notes). Exibidas no perfil do pet e no cartão de emergência. Listar nas alergias do cartão de emergência.
+**Notas Epic 11 ML Wishlist:** Requer app registrado em developers.mercadolivre.com.br → `client_id` + `client_secret`. Fluxo: (1) client_credentials token para busca com preço/avaliação real; (2) OAuth do usuário via `expo-auth-session` com redirect `augenda://ml-callback`; (3) `POST /users/{user_id}/wishlist/add_item` para salvar produto na conta ML da tutora. Aguarda Marta criar o app ML e fornecer as credenciais.
 
----
-
-### P2 — Melhoria (continuação)
-
-| Tipo | Epic | Item | Status |
-|------|------|------|--------|
-| Produto | Epic 11 | **Lembrete de recompra de medicamento** — ao cadastrar med, opção de lembrar quando estiver acabando | [ ] |
-| Produto | Epic 11 | **Busca no Mercado Livre** — a partir do lembrete de recompra, buscar produto no ML e adicionar ao carrinho | [ ] |
-
-**Notas Epic 11 (Recompra):** Adicionar campo `restock_reminder_days` (int, nullable) no cadastro de medicamento. Quando preenchido, calcular data de alerta = `ends_at - restock_reminder_days` e criar um reminder automático. Para busca ML: usar ML Search API (`https://api.mercadolibre.com/sites/MLB/search?q=<nome_med>`) — retorna lista de produtos. UI: modal com resultados + botão "Ver no Mercado Livre" que abre a URL do produto (`product.permalink`). Adicionar ao carrinho requer OAuth ML — por ora, abrir o produto no browser e deixar o usuário adicionar.
+**Notas Epic 13 (Agente conversacional):** Usar Claude API (já configurada). Tutora digita em linguagem natural: *"Pipo tomou Bravecto hoje"* ou *"Bento vomitou às 14h, tirei uma foto"*. Claude extrai entidade (pet, tipo de registro, dados) e confirma antes de salvar. Reduz atrito de navegação tela-a-tela. UI: botão de chat flutuante (+) ou tela dedicada. Backend: chamada à API Anthropic com contexto dos pets da tutora + histórico recente.
 
 ---
 
@@ -130,6 +112,7 @@ Tasks simples e bem definidas. Usar quando:
 | Tipo | Epic | Item | Status |
 |------|------|------|--------|
 | Produto | — | Compartilhamento social / relatório para veterinário | [ ] |
+| Produto | Epic 11 | Produtos recorrentes (ração, petisco) com ciclo estimado | [ ] |
 | Técnico | Infra | i18n para expansão além do Brasil | [ ] |
 | Técnico | Infra | Analytics de uso (Posthog ou similar) | [ ] |
 
@@ -139,12 +122,9 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tabela | Descrição | Epic | Prioridade |
 |--------|-----------|------|------------|
-| `reminders` | Lembretes recorrentes por pet | 3 | P1 |
-| `medication_doses` | Registro de cada dose administrada | 4 | P1 |
-| `symptom_logs` | Diário clínico / sintomas | 6 | P2 |
-| `chronic_conditions` | Condições crônicas do pet | 10 | P2 |
-| `emergency_profiles` | Perfil de emergência público | 8 | P0 |
-| Campos em `pets` | sex, microchip, neutered, allergies, weight, vet_name, vet_phone, emergency_contact_name, emergency_contact_phone | 8 | P0 |
+| `incidents` | Adversidades/incidentes com foto | 14 | P1 |
+| `grooming_logs` | Banho, tosa, próxima data | 12 | P2 |
+| `weight_logs` | Histórico de peso por data | — | ✅ |
 
 ---
 

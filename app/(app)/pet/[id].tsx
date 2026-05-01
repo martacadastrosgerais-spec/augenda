@@ -20,10 +20,19 @@ import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition } from "@/types";
+import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory } from "@/types";
 
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
+
+const INCIDENT_CONFIG: Record<IncidentCategory, { label: string; icon: string; color: string; bg: string }> = {
+  vomit:            { label: "Vômito",          icon: "🤢", color: "text-amber-600",  bg: "bg-amber-50"  },
+  diarrhea:         { label: "Diarreia",        icon: "💩", color: "text-orange-600", bg: "bg-orange-50" },
+  wound:            { label: "Ferida / Lesão",  icon: "🩹", color: "text-red-600",    bg: "bg-red-50"    },
+  behavior:         { label: "Comportamento",   icon: "😰", color: "text-blue-600",   bg: "bg-blue-50"   },
+  allergy_reaction: { label: "Reação alérgica", icon: "🤧", color: "text-purple-600", bg: "bg-purple-50" },
+  other:            { label: "Outro",           icon: "❓", color: "text-sage-600",   bg: "bg-sage-50"   },
+};
 const SEVERITY_CONFIG = {
   low:    { label: "Normal",  color: "bg-sage-100",  textColor: "text-sage-600" },
   medium: { label: "Atenção", color: "bg-amber-100", textColor: "text-amber-600" },
@@ -48,6 +57,7 @@ export default function PetDetailScreen() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [conditions, setConditions] = useState<ChronicCondition[]>([]);
   const [lastDoses, setLastDoses] = useState<Record<string, string>>({});
   const [addingCondition, setAddingCondition] = useState(false);
@@ -71,7 +81,7 @@ export default function PetDetailScreen() {
   );
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
@@ -79,6 +89,7 @@ export default function PetDetailScreen() {
       supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
       supabase.from("chronic_conditions").select("*").eq("pet_id", id).order("created_at"),
       supabase.from("medication_doses").select("medication_id, administered_at").eq("pet_id", id).order("administered_at", { ascending: false }),
+      supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -89,6 +100,7 @@ export default function PetDetailScreen() {
     setProcedures(procsRes.data ?? []);
     setLogs(logsRes.data ?? []);
     setConditions((condRes as any).data ?? []);
+    setIncidents((incidentsRes.data ?? []) as Incident[]);
 
     const doseMap: Record<string, string> = {};
     for (const d of (dosesRes.data ?? []) as MedicationDose[]) {
@@ -528,39 +540,80 @@ export default function PetDetailScreen() {
 
         {activeTab === "logs" && (
           <>
-            <TouchableOpacity
-              className="bg-sage-400 rounded-xl py-3 flex-row items-center justify-center mb-3"
-              onPress={() => router.push(`/(app)/pet/${id}/add-log` as any)}
-            >
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text className="text-white font-medium ml-1">Nova anotação</Text>
-            </TouchableOpacity>
+            <View className="flex-row gap-2 mb-3">
+              <TouchableOpacity
+                className="flex-1 bg-red-400 rounded-xl py-3 flex-row items-center justify-center gap-1"
+                onPress={() => router.push(`/(app)/pet/${id}/add-incident` as any)}
+              >
+                <Text className="text-white text-base">⚠️</Text>
+                <Text className="text-white font-medium text-sm">Adversidade</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-sage-400 rounded-xl py-3 flex-row items-center justify-center gap-1"
+                onPress={() => router.push(`/(app)/pet/${id}/add-log` as any)}
+              >
+                <Ionicons name="create-outline" size={16} color="#fff" />
+                <Text className="text-white font-medium text-sm">Anotação</Text>
+              </TouchableOpacity>
+            </View>
 
-            {logs.length === 0 ? (
+            {logs.length === 0 && incidents.length === 0 ? (
               <View className="items-center mt-8">
-                <Text className="text-sage-300 text-lg">Nenhuma anotação registrada</Text>
+                <Text className="text-sage-300 text-lg">Nenhum registro no diário</Text>
               </View>
             ) : (
-              logs.map((item) => {
-                const sev = SEVERITY_CONFIG[item.severity];
-                const d = new Date(item.noted_at);
-                const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-                const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                return (
-                  <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                    <View className="flex-row items-start justify-between mb-2">
-                      <View className={`${sev.color} px-2 py-0.5 rounded-full`}>
-                        <Text className={`${sev.textColor} text-xs font-medium`}>{sev.label}</Text>
+              <>
+                {incidents.map((item) => {
+                  const cfg = INCIDENT_CONFIG[item.category as IncidentCategory] ?? INCIDENT_CONFIG.other;
+                  const d = new Date(item.occurred_at);
+                  const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  return (
+                    <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm border-l-4 border-red-300">
+                      <View className="flex-row items-start justify-between mb-2">
+                        <View className={`${cfg.bg} px-2 py-0.5 rounded-full flex-row items-center gap-1`}>
+                          <Text className="text-xs">{cfg.icon}</Text>
+                          <Text className={`${cfg.color} text-xs font-medium`}>{cfg.label}</Text>
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
+                          <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                        </View>
                       </View>
-                      <View className="items-end">
-                        <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
-                        <Text className="text-sage-400 text-xs">{timeStr}</Text>
-                      </View>
+                      <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
+                      {item.photo_url && (
+                        <Image
+                          source={{ uri: item.photo_url }}
+                          className="w-full rounded-xl mt-3"
+                          style={{ height: 160 }}
+                          resizeMode="cover"
+                        />
+                      )}
                     </View>
-                    <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
-                  </View>
-                );
-              })
+                  );
+                })}
+
+                {logs.map((item) => {
+                  const sev = SEVERITY_CONFIG[item.severity];
+                  const d = new Date(item.noted_at);
+                  const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  return (
+                    <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                      <View className="flex-row items-start justify-between mb-2">
+                        <View className={`${sev.color} px-2 py-0.5 rounded-full`}>
+                          <Text className={`${sev.textColor} text-xs font-medium`}>{sev.label}</Text>
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
+                          <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                        </View>
+                      </View>
+                      <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
+                    </View>
+                  );
+                })}
+              </>
             )}
           </>
         )}
