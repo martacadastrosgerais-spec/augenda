@@ -160,6 +160,19 @@ export interface Incident {
   created_at: string;
 }
 
+export type ProductCategory = "food" | "hygiene" | "medication" | "other";
+
+export interface RecurringProduct {
+  id: string;
+  pet_id: string;
+  name: string;
+  category: ProductCategory;
+  cycle_days: number;
+  last_purchased_at?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export type GroomingType = "bath" | "grooming" | "both";
 
 export interface GroomingLog {

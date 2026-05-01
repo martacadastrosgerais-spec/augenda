@@ -21,7 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType } from "@/types";
+import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType, RecurringProduct, ProductCategory } from "@/types";
 
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
@@ -34,6 +34,13 @@ const INCIDENT_CONFIG: Record<IncidentCategory, { label: string; icon: string; c
   allergy_reaction: { label: "Reação alérgica", icon: "🤧", color: "text-purple-600", bg: "bg-purple-50" },
   other:            { label: "Outro",           icon: "❓", color: "text-sage-600",   bg: "bg-sage-50"   },
 };
+const PRODUCT_CATEGORY_CONFIG: Record<ProductCategory, { label: string; icon: string }> = {
+  food:       { label: "Alimentação", icon: "nutrition-outline" },
+  hygiene:    { label: "Higiene",     icon: "water-outline" },
+  medication: { label: "Medicamento", icon: "medical-outline" },
+  other:      { label: "Outro",       icon: "cube-outline" },
+};
+
 const GROOMING_CONFIG: Record<GroomingType, { label: string; icon: string }> = {
   bath:     { label: "Banho",        icon: "water-outline" },
   grooming: { label: "Tosa",         icon: "cut-outline" },
@@ -68,6 +75,12 @@ export default function PetDetailScreen() {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [groomingLogs, setGroomingLogs] = useState<GroomingLog[]>([]);
+  const [recurringProducts, setRecurringProducts] = useState<RecurringProduct[]>([]);
+  const [addingProduct, setAddingProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductCycle, setNewProductCycle] = useState("30");
+  const [newProductCategory, setNewProductCategory] = useState<ProductCategory>("food");
+  const [savingProduct, setSavingProduct] = useState(false);
   const [conditions, setConditions] = useState<ChronicCondition[]>([]);
   const [lastDoses, setLastDoses] = useState<Record<string, string>>({});
   const [addingCondition, setAddingCondition] = useState(false);
@@ -95,7 +108,7 @@ export default function PetDetailScreen() {
   );
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes, groomingRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes, groomingRes, productsRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }).limit(PAGE_SIZE),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }).limit(PAGE_SIZE),
@@ -105,6 +118,7 @@ export default function PetDetailScreen() {
       supabase.from("medication_doses").select("medication_id, administered_at").eq("pet_id", id).order("administered_at", { ascending: false }),
       supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }).limit(PAGE_SIZE),
       supabase.from("grooming_logs").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
+      supabase.from("recurring_products").select("*").eq("pet_id", id).order("created_at"),
     ]);
 
     if (petRes.error) {
@@ -118,6 +132,7 @@ export default function PetDetailScreen() {
         setConditions(cached.conditions ?? []);
         setIncidents(cached.incidents ?? []);
         setGroomingLogs(cached.groomingLogs ?? []);
+        setRecurringProducts(cached.recurringProducts ?? []);
         setLastDoses(cached.lastDoses ?? {});
         setIsOffline(true);
       } else {
@@ -135,6 +150,7 @@ export default function PetDetailScreen() {
     const logsData = logsRes.data ?? [];
     const incData = (incidentsRes.data ?? []) as Incident[];
     const groomData = (groomingRes.data ?? []) as GroomingLog[];
+    const prodData = (productsRes.data ?? []) as RecurringProduct[];
     const condData = (condRes as any).data ?? [];
 
     const doseMap: Record<string, string> = {};
@@ -149,6 +165,7 @@ export default function PetDetailScreen() {
     setConditions(condData);
     setIncidents(incData);
     setGroomingLogs(groomData);
+    setRecurringProducts(prodData);
     setLastDoses(doseMap);
     setIsOffline(false);
     setHasMore({
@@ -168,6 +185,7 @@ export default function PetDetailScreen() {
       conditions: condData,
       incidents: incData,
       groomingLogs: groomData,
+      recurringProducts: prodData,
       lastDoses: doseMap,
     });
 
@@ -337,6 +355,51 @@ export default function PetDetailScreen() {
   async function deleteCondition(condId: string) {
     await supabase.from("chronic_conditions").delete().eq("id", condId);
     setConditions((prev) => prev.filter((c) => c.id !== condId));
+  }
+
+  async function saveRecurringProduct() {
+    if (!newProductName.trim()) return;
+    setSavingProduct(true);
+    const { data, error } = await supabase
+      .from("recurring_products")
+      .insert({
+        pet_id: id,
+        name: newProductName.trim(),
+        category: newProductCategory,
+        cycle_days: parseInt(newProductCycle, 10) || 30,
+      })
+      .select()
+      .single();
+    setSavingProduct(false);
+    if (!error && data) {
+      setRecurringProducts((prev) => [...prev, data as RecurringProduct]);
+      setNewProductName("");
+      setNewProductCycle("30");
+      setNewProductCategory("food");
+      setAddingProduct(false);
+    }
+  }
+
+  async function deleteRecurringProduct(productId: string) {
+    await supabase.from("recurring_products").delete().eq("id", productId);
+    setRecurringProducts((prev) => prev.filter((p) => p.id !== productId));
+  }
+
+  async function markAsBought(productId: string) {
+    const today = new Date().toISOString().split("T")[0];
+    await supabase.from("recurring_products").update({ last_purchased_at: today }).eq("id", productId);
+    setRecurringProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, last_purchased_at: today } : p))
+    );
+  }
+
+  function getNextPurchaseDate(product: RecurringProduct): { dateStr: string; daysLeft: number } | null {
+    if (!product.last_purchased_at) return null;
+    const next = new Date(product.last_purchased_at);
+    next.setDate(next.getDate() + product.cycle_days);
+    const daysLeft = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const dateStr = `${String(next.getDate()).padStart(2, "0")}/${String(next.getMonth() + 1).padStart(2, "0")}/${next.getFullYear()}`;
+    return { dateStr, daysLeft };
   }
 
   async function handleDelete() {
@@ -525,6 +588,115 @@ export default function PetDetailScreen() {
               <TouchableOpacity onPress={() => { setAddingCondition(false); setNewConditionName(""); }} hitSlop={4}>
                 <Ionicons name="close-circle" size={28} color="#60b880" />
               </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Estoque (Produtos Recorrentes) */}
+        <View className="mt-4 pt-4 border-t border-sage-100">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-xs font-semibold text-sage-600 uppercase tracking-wide">Estoque</Text>
+            {!addingProduct && (
+              <TouchableOpacity onPress={() => setAddingProduct(true)} className="p-0.5">
+                <Ionicons name="add-circle-outline" size={18} color="#32a060" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {recurringProducts.length === 0 && !addingProduct && (
+            <Text className="text-sage-300 text-xs">Nenhum produto cadastrado</Text>
+          )}
+
+          {recurringProducts.map((p) => {
+            const cfg = PRODUCT_CATEGORY_CONFIG[p.category as ProductCategory] ?? PRODUCT_CATEGORY_CONFIG.other;
+            const next = getNextPurchaseDate(p);
+            const urgent = next ? next.daysLeft <= 3 : true;
+            return (
+              <View key={p.id} className={`mb-2 rounded-xl p-3 border ${urgent ? "bg-amber-50 border-amber-200" : "bg-sage-50 border-sage-100"}`}>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2 flex-1">
+                    <View className={`rounded-full p-1.5 ${urgent ? "bg-amber-100" : "bg-sage-100"}`}>
+                      <Ionicons name={cfg.icon as any} size={13} color={urgent ? "#d97706" : "#32a060"} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sage-800 text-sm font-medium">{p.name}</Text>
+                      <Text className={`text-xs ${urgent ? "text-amber-600" : "text-sage-400"}`}>
+                        {cfg.label} · a cada {p.cycle_days} dias
+                        {next ? ` · próxima: ${next.dateStr}` : " · nunca comprado"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <TouchableOpacity
+                      onPress={() => markAsBought(p.id)}
+                      className={`rounded-lg px-2 py-1 ${urgent ? "bg-amber-400" : "bg-sage-200"}`}
+                    >
+                      <Text className={`text-xs font-semibold ${urgent ? "text-white" : "text-sage-600"}`}>✓ Comprei</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteRecurringProduct(p.id)} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color="#60b880" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+
+          {addingProduct && (
+            <View className="bg-sage-50 border border-sage-200 rounded-xl p-3 gap-2">
+              <TextInput
+                className="border border-sage-200 rounded-xl px-3 py-2 text-sage-800 bg-white text-sm"
+                placeholder="Nome do produto (ex: Ração Royal Canin...)"
+                placeholderTextColor="#60b880"
+                value={newProductName}
+                onChangeText={setNewProductName}
+                autoFocus
+              />
+              <View className="flex-row gap-2">
+                <View className="flex-1 border border-sage-200 rounded-xl overflow-hidden">
+                  {(["food", "hygiene", "medication", "other"] as ProductCategory[]).map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => setNewProductCategory(cat)}
+                      className={`px-2 py-1.5 flex-row items-center gap-1 ${newProductCategory === cat ? "bg-sage-400" : "bg-white"}`}
+                    >
+                      <Ionicons name={PRODUCT_CATEGORY_CONFIG[cat].icon as any} size={12} color={newProductCategory === cat ? "#fff" : "#32a060"} />
+                      <Text className={`text-xs ${newProductCategory === cat ? "text-white font-medium" : "text-sage-600"}`}>
+                        {PRODUCT_CATEGORY_CONFIG[cat].label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View className="flex-1 gap-1">
+                  <Text className="text-sage-500 text-xs">Ciclo (dias)</Text>
+                  <TextInput
+                    className="border border-sage-200 rounded-xl px-3 py-2 text-sage-800 bg-white text-sm"
+                    placeholder="30"
+                    placeholderTextColor="#60b880"
+                    value={newProductCycle}
+                    onChangeText={setNewProductCycle}
+                    keyboardType="number-pad"
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={saveRecurringProduct}
+                  disabled={savingProduct}
+                  className="flex-1 bg-sage-400 rounded-xl py-2 items-center"
+                >
+                  {savingProduct
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text className="text-white text-sm font-semibold">Salvar</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setAddingProduct(false); setNewProductName(""); setNewProductCycle("30"); }}
+                  className="flex-1 border border-sage-200 rounded-xl py-2 items-center"
+                >
+                  <Text className="text-sage-500 text-sm">Cancelar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
