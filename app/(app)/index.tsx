@@ -64,6 +64,9 @@ export default function PetsScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [pets, setPets] = useState<PetListItem[]>([]);
+  const [archivedPets, setArchivedPets] = useState<PetListItem[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [loadingArchived, setLoadingArchived] = useState(false);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +99,7 @@ export default function PetsScreen() {
 
   async function fetchPets() {
     const [ownedRes, memberRes] = await Promise.all([
-      supabase.from("pets").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
+      supabase.from("pets").select("*").eq("user_id", user!.id).eq("archived", false).order("created_at", { ascending: false }),
       supabase.from("pet_members").select("pet_id, pets(*)").eq("user_id", user!.id),
     ]);
 
@@ -109,10 +112,29 @@ export default function PetsScreen() {
     const memberList: PetListItem[] = (memberRes.data ?? [])
       .map((m: any) => m.pets)
       .filter(Boolean)
+      .filter((p: Pet) => !p.archived)
       .map((p: Pet) => ({ ...p, isOwner: false }));
 
     const ownedIds = new Set(ownedList.map((p) => p.id));
     setPets([...ownedList, ...memberList.filter((p) => !ownedIds.has(p.id))]);
+  }
+
+  async function fetchArchivedPets() {
+    setLoadingArchived(true);
+    const { data } = await supabase
+      .from("pets")
+      .select("*")
+      .eq("user_id", user!.id)
+      .eq("archived", true)
+      .order("updated_at", { ascending: false });
+    setArchivedPets((data ?? []).map((p) => ({ ...p, isOwner: true })));
+    setLoadingArchived(false);
+  }
+
+  async function unarchivePet(petId: string) {
+    await supabase.from("pets").update({ archived: false }).eq("id", petId);
+    setArchivedPets((prev) => prev.filter((p) => p.id !== petId));
+    fetchPets();
   }
 
   async function fetchAlerts() {
@@ -258,54 +280,8 @@ export default function PetsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            alerts.length > 0 ? (
-              <View className="mb-4">
-                {/* Seção: Atrasados */}
-                {overdue.length > 0 && (
-                  <View className="mb-4">
-                    <View className="flex-row items-center gap-2 mb-2">
-                      <Ionicons name="alert-circle" size={16} color="#ef4444" />
-                      <Text className="text-red-500 font-bold text-sm uppercase tracking-wide">Atrasados</Text>
-                    </View>
-                    {overdue.map((item) => (
-                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
-                    ))}
-                  </View>
-                )}
-
-                {/* Seção: Hoje */}
-                {todayAlerts.length > 0 && (
-                  <View className="mb-4">
-                    <View className="flex-row items-center gap-2 mb-2">
-                      <Ionicons name="today-outline" size={16} color="#d97706" />
-                      <Text className="text-amber-600 font-bold text-sm uppercase tracking-wide">Hoje</Text>
-                    </View>
-                    {todayAlerts.map((item) => (
-                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
-                    ))}
-                  </View>
-                )}
-
-                {/* Seção: Esta semana */}
-                {soon.length > 0 && (
-                  <View className="mb-4">
-                    <View className="flex-row items-center gap-2 mb-2">
-                      <Ionicons name="calendar-outline" size={16} color="#32a060" />
-                      <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Esta semana</Text>
-                    </View>
-                    {soon.map((item) => (
-                      <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
-                    ))}
-                  </View>
-                )}
-
-                <View className="h-px bg-sage-100 mb-4" />
-              </View>
-            ) : null
-          }
           ListEmptyComponent={
-            alerts.length === 0 ? (
+            pets.length === 0 && alerts.length === 0 ? (
               <View className="items-center justify-center px-8 mt-16">
                 <Text className="text-5xl mb-4">🐾</Text>
                 <Text className="text-xl font-semibold text-sage-600 text-center">
@@ -317,13 +293,101 @@ export default function PetsScreen() {
               </View>
             ) : null
           }
+          ListHeaderComponent={
+            <>
+              {alerts.length > 0 ? (
+                <View className="mb-4">
+                  {overdue.length > 0 && (
+                    <View className="mb-4">
+                      <View className="flex-row items-center gap-2 mb-2">
+                        <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                        <Text className="text-red-500 font-bold text-sm uppercase tracking-wide">Atrasados</Text>
+                      </View>
+                      {overdue.map((item) => (
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                      ))}
+                    </View>
+                  )}
+                  {todayAlerts.length > 0 && (
+                    <View className="mb-4">
+                      <View className="flex-row items-center gap-2 mb-2">
+                        <Ionicons name="today-outline" size={16} color="#d97706" />
+                        <Text className="text-amber-600 font-bold text-sm uppercase tracking-wide">Hoje</Text>
+                      </View>
+                      {todayAlerts.map((item) => (
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                      ))}
+                    </View>
+                  )}
+                  {soon.length > 0 && (
+                    <View className="mb-4">
+                      <View className="flex-row items-center gap-2 mb-2">
+                        <Ionicons name="calendar-outline" size={16} color="#32a060" />
+                        <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Esta semana</Text>
+                      </View>
+                      {soon.map((item) => (
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                      ))}
+                    </View>
+                  )}
+                  <View className="h-px bg-sage-100 mb-4" />
+                </View>
+              ) : null}
+              {pets.length > 0 ? (
+                <View className="flex-row items-center gap-2 mb-3 mt-1">
+                  <Ionicons name="paw" size={15} color="#32a060" />
+                  <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Meus Pets</Text>
+                </View>
+              ) : null}
+            </>
+          }
           ListFooterComponent={
-            pets.length > 0 ? (
-              <View className="flex-row items-center gap-2 mb-3 mt-1">
-                <Ionicons name="paw" size={15} color="#32a060" />
-                <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Meus Pets</Text>
-              </View>
-            ) : null
+            <>
+              <TouchableOpacity
+                className="flex-row items-center gap-2 py-3 mt-2"
+                onPress={() => {
+                  if (!showArchived) fetchArchivedPets();
+                  setShowArchived((v) => !v);
+                }}
+              >
+                <Ionicons name={showArchived ? "chevron-up" : "archive-outline"} size={15} color="#60b880" />
+                <Text className="text-sage-400 text-sm">
+                  {showArchived ? "Ocultar arquivados" : "Ver pets arquivados"}
+                </Text>
+              </TouchableOpacity>
+              {showArchived && (
+                <View className="mt-1">
+                  {loadingArchived ? (
+                    <ActivityIndicator color="#32a060" style={{ marginVertical: 12 }} />
+                  ) : archivedPets.length === 0 ? (
+                    <Text className="text-sage-300 text-sm text-center py-4">Nenhum pet arquivado</Text>
+                  ) : (
+                    archivedPets.map((item) => (
+                      <View key={item.id} className="bg-white/60 rounded-2xl p-4 mb-3 flex-row items-center shadow-sm border border-sage-100">
+                        {item.photo_url ? (
+                          <Image source={{ uri: item.photo_url }} className="w-12 h-12 rounded-full bg-sage-100 opacity-60" />
+                        ) : (
+                          <View className="w-12 h-12 rounded-full bg-sage-100 items-center justify-center opacity-60">
+                            <Text className="text-2xl">{SPECIES_ICON[item.species]}</Text>
+                          </View>
+                        )}
+                        <View className="ml-3 flex-1">
+                          <Text className="text-base font-semibold text-sage-400">{item.name}</Text>
+                          <Text className="text-sage-300 text-xs">{SPECIES_LABEL[item.species]}{item.breed ? ` · ${item.breed}` : ""}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => unarchivePet(item.id)}
+                          className="border border-sage-200 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
+                        >
+                          <Ionicons name="refresh-outline" size={13} color="#32a060" />
+                          <Text className="text-sage-500 text-xs font-medium">Restaurar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </>
           }
           renderItem={({ item, index }) => (
             <TouchableOpacity

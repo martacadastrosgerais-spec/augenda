@@ -56,6 +56,7 @@ export interface Pet {
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   emergency_card_enabled: boolean;
+  archived: boolean;
   created_at: string;
   updated_at: string;
 }

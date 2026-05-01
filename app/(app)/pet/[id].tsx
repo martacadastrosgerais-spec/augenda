@@ -74,6 +74,7 @@ export default function PetDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [mlQuery, setMlQuery] = useState<string | null>(null);
 
@@ -175,6 +176,16 @@ export default function PetDetailScreen() {
     router.replace("/(app)");
   }
 
+  async function handleArchive() {
+    await supabase.from("pets").update({ archived: true }).eq("id", id);
+    router.replace("/(app)");
+  }
+
+  async function handleUnarchive() {
+    await supabase.from("pets").update({ archived: false }).eq("id", id);
+    setPet((prev) => prev ? { ...prev, archived: false } : prev);
+  }
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-sage-700 items-center justify-center">
@@ -216,11 +227,26 @@ export default function PetDetailScreen() {
                   <Text className="text-white text-xs font-semibold">Não</Text>
                 </TouchableOpacity>
               </>
+            ) : confirmArchive ? (
+              <>
+                <Text className="text-sage-300 text-xs mr-1">Arquivar?</Text>
+                <TouchableOpacity onPress={handleArchive} className="bg-amber-500 rounded-lg px-3 py-1">
+                  <Text className="text-white text-xs font-semibold">Sim</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmArchive(false)} className="border border-sage-500 rounded-lg px-3 py-1">
+                  <Text className="text-white text-xs font-semibold">Não</Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <>
                 <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
                   <Ionicons name="create-outline" size={22} color="#fff" />
                 </TouchableOpacity>
+                {!pet.archived && (
+                  <TouchableOpacity onPress={() => setConfirmArchive(true)} className="p-1">
+                    <Ionicons name="archive-outline" size={21} color="#fde68a" />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1">
                   <Ionicons name="trash-outline" size={22} color="#fca5a5" />
                 </TouchableOpacity>
@@ -235,6 +261,16 @@ export default function PetDetailScreen() {
 
       <ScrollView className="flex-1 bg-cream rounded-t-3xl" style={{ marginTop: -12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View style={{ height: 16 }} />
+
+      {pet.archived && (
+        <View className="mx-5 mb-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-3">
+          <Ionicons name="archive" size={18} color="#d97706" />
+          <Text className="text-amber-700 text-sm flex-1">Este pet está arquivado.</Text>
+          <TouchableOpacity onPress={handleUnarchive} className="bg-amber-400 rounded-xl px-3 py-1.5">
+            <Text className="text-white text-xs font-semibold">Restaurar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Pet info card */}
       <View className="mx-5 bg-white rounded-2xl p-5 shadow-sm mb-4">
