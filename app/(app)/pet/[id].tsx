@@ -226,6 +226,98 @@ export default function PetDetailScreen() {
     setMlQuery(medName);
   }
 
+  async function shareVetReport() {
+    if (!pet) return;
+    const now = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const lines: string[] = [
+      `RELATÓRIO DE SAÚDE — ${pet.name.toUpperCase()}`,
+      `Gerado em ${now}`,
+      "────────────────────────",
+      "",
+    ];
+
+    lines.push("INFORMAÇÕES BÁSICAS");
+    lines.push(`Espécie: ${pet.species === "dog" ? "Cão" : "Gato"}`);
+    if (pet.breed) lines.push(`Raça: ${pet.breed}`);
+    if (pet.birth_date) lines.push(`Nascimento: ${formatDateISO(pet.birth_date)} (${getAge(pet.birth_date)})`);
+    if (pet.weight_kg != null) lines.push(`Peso: ${pet.weight_kg} kg`);
+    if (pet.sex && pet.sex !== "unknown") lines.push(`Sexo: ${SEX_LABEL[pet.sex]}${pet.neutered ? " — castrado(a)" : ""}`);
+    if (pet.microchip) lines.push(`Microchip: ${pet.microchip}`);
+    if (pet.allergies) lines.push(`Alergias: ${pet.allergies}`);
+    lines.push("");
+
+    if (conditions.length > 0) {
+      lines.push("CONDIÇÕES CRÔNICAS");
+      conditions.forEach((c) => lines.push(`• ${c.name}${c.diagnosed_at ? ` (desde ${formatDateISO(c.diagnosed_at)})` : ""}`));
+      lines.push("");
+    }
+
+    const activeMeds = medications.filter((m) => m.active);
+    if (activeMeds.length > 0) {
+      lines.push("MEDICAMENTOS ATIVOS");
+      activeMeds.forEach((m) => {
+        let line = `• ${m.name}`;
+        if (m.dose) line += ` — ${m.dose}`;
+        if (m.frequency) line += ` — ${m.frequency}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (vaccines.length > 0) {
+      lines.push("VACINAS");
+      vaccines.slice(0, 8).forEach((v) => {
+        let line = `• ${v.name} — ${formatDateISO(v.applied_at)}`;
+        if (v.next_dose_at) line += ` → próxima: ${formatDateISO(v.next_dose_at)}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (procedures.length > 0) {
+      lines.push("PROCEDIMENTOS");
+      procedures.slice(0, 5).forEach((p) => {
+        lines.push(`• ${formatDateISO(p.performed_at)} [${PROCEDURE_TYPE_LABEL[p.type]}] ${p.title}${p.vet_name ? ` — Dr(a). ${p.vet_name}` : ""}`);
+        if (p.description) lines.push(`  ${p.description}`);
+      });
+      lines.push("");
+    }
+
+    if (incidents.length > 0) {
+      lines.push("ADVERSIDADES RECENTES");
+      incidents.slice(0, 5).forEach((i) => {
+        const d = new Date(i.occurred_at);
+        const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+        const label = INCIDENT_CONFIG[i.category as IncidentCategory]?.label ?? i.category;
+        lines.push(`• ${ds} [${label}]: ${i.description}`);
+      });
+      lines.push("");
+    }
+
+    if (pet.vet_name || pet.vet_phone) {
+      lines.push("VETERINÁRIO");
+      if (pet.vet_name) lines.push(`Dr(a). ${pet.vet_name}`);
+      if (pet.vet_phone) lines.push(pet.vet_phone);
+      lines.push("");
+    }
+
+    if (pet.emergency_card_enabled) {
+      lines.push(`Cartão de emergência: ${getEmergencyUrl()}`);
+    }
+
+    const text = lines.join("\n");
+
+    if (Platform.OS === "web") {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        navigator.share({ title: `Relatório — ${pet.name}`, text });
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => alert("Relatório copiado!"));
+      }
+    } else {
+      Share.share({ message: text, title: `Relatório — ${pet.name}` });
+    }
+  }
+
   async function saveCondition() {
     if (!newConditionName.trim()) return;
     setSavingCondition(true);
@@ -463,6 +555,16 @@ export default function PetDetailScreen() {
             </View>
           </View>
         )}
+
+        <View className="mt-4 pt-4 border-t border-sage-100">
+          <TouchableOpacity
+            onPress={shareVetReport}
+            className="flex-row items-center gap-2"
+          >
+            <Ionicons name="document-text-outline" size={15} color="#32a060" />
+            <Text className="text-sage-500 text-sm">Gerar relatório para veterinário</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tabs */}
