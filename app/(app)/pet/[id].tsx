@@ -54,6 +54,8 @@ const PROCEDURE_TYPE_LABEL: Record<string, string> = {
   other: "Outro",
 };
 
+const PAGE_SIZE = 30;
+
 export default function PetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -77,6 +79,8 @@ export default function PetDetailScreen() {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [mlQuery, setMlQuery] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState({ vaccines: false, medications: false, procedures: false, logs: false, incidents: false });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,26 +95,39 @@ export default function PetDetailScreen() {
   async function fetchData() {
     const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes, groomingRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
-      supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
-      supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
-      supabase.from("procedures").select("*, attachments(*)").eq("pet_id", id).order("performed_at", { ascending: false }),
-      supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
+      supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }).limit(PAGE_SIZE),
+      supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }).limit(PAGE_SIZE),
+      supabase.from("procedures").select("*, attachments(*)").eq("pet_id", id).order("performed_at", { ascending: false }).limit(PAGE_SIZE),
+      supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }).limit(PAGE_SIZE),
       supabase.from("chronic_conditions").select("*").eq("pet_id", id).order("created_at"),
       supabase.from("medication_doses").select("medication_id, administered_at").eq("pet_id", id).order("administered_at", { ascending: false }),
-      supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }),
+      supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }).limit(PAGE_SIZE),
       supabase.from("grooming_logs").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
     else setPet(petRes.data);
 
-    setVaccines(vaccinesRes.data ?? []);
-    setMedications(medsRes.data ?? []);
-    setProcedures(procsRes.data ?? []);
-    setLogs(logsRes.data ?? []);
+    const vaccData = vaccinesRes.data ?? [];
+    const medsData = medsRes.data ?? [];
+    const procsData = procsRes.data ?? [];
+    const logsData = logsRes.data ?? [];
+    const incData = (incidentsRes.data ?? []) as Incident[];
+
+    setVaccines(vaccData as Vaccine[]);
+    setMedications(medsData as Medication[]);
+    setProcedures(procsData as Procedure[]);
+    setLogs(logsData as SymptomLog[]);
     setConditions((condRes as any).data ?? []);
-    setIncidents((incidentsRes.data ?? []) as Incident[]);
+    setIncidents(incData);
     setGroomingLogs((groomingRes.data ?? []) as GroomingLog[]);
+    setHasMore({
+      vaccines:   vaccData.length === PAGE_SIZE,
+      medications: medsData.length === PAGE_SIZE,
+      procedures: procsData.length === PAGE_SIZE,
+      logs:       logsData.length === PAGE_SIZE,
+      incidents:  incData.length === PAGE_SIZE,
+    });
 
     const doseMap: Record<string, string> = {};
     for (const d of (dosesRes.data ?? []) as MedicationDose[]) {
@@ -121,6 +138,35 @@ export default function PetDetailScreen() {
     setLoading(false);
   }
 
+
+  async function loadMore(tab: keyof typeof hasMore) {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    let data: any[] = [];
+    if (tab === "vaccines") {
+      const res = await supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }).range(vaccines.length, vaccines.length + PAGE_SIZE - 1);
+      data = res.data ?? [];
+      setVaccines((p) => [...p, ...data] as Vaccine[]);
+    } else if (tab === "medications") {
+      const res = await supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }).range(medications.length, medications.length + PAGE_SIZE - 1);
+      data = res.data ?? [];
+      setMedications((p) => [...p, ...data] as Medication[]);
+    } else if (tab === "procedures") {
+      const res = await supabase.from("procedures").select("*, attachments(*)").eq("pet_id", id).order("performed_at", { ascending: false }).range(procedures.length, procedures.length + PAGE_SIZE - 1);
+      data = res.data ?? [];
+      setProcedures((p) => [...p, ...data] as Procedure[]);
+    } else if (tab === "logs") {
+      const res = await supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }).range(logs.length, logs.length + PAGE_SIZE - 1);
+      data = res.data ?? [];
+      setLogs((p) => [...p, ...data] as SymptomLog[]);
+    } else if (tab === "incidents") {
+      const res = await supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }).range(incidents.length, incidents.length + PAGE_SIZE - 1);
+      data = res.data ?? [];
+      setIncidents((p) => [...p, ...data] as Incident[]);
+    }
+    setHasMore((prev) => ({ ...prev, [tab]: data.length === PAGE_SIZE }));
+    setLoadingMore(false);
+  }
 
   function getEmergencyUrl() {
     const appUrl = process.env.EXPO_PUBLIC_APP_URL ?? "https://velvety-liger-3bd88f.netlify.app";
@@ -449,6 +495,11 @@ export default function PetDetailScreen() {
                 </View>
               ))
             )}
+          {hasMore.vaccines && (
+            <TouchableOpacity onPress={() => loadMore("vaccines")} disabled={loadingMore} className="items-center py-3">
+              {loadingMore ? <ActivityIndicator color="#32a060" /> : <Text className="text-sage-400 text-sm">Carregar mais</Text>}
+            </TouchableOpacity>
+          )}
           </>
         )}
 
@@ -533,6 +584,11 @@ export default function PetDetailScreen() {
                   </View>
                 </View>
               ))
+            )}
+            {hasMore.medications && (
+              <TouchableOpacity onPress={() => loadMore("medications")} disabled={loadingMore} className="items-center py-3">
+                {loadingMore ? <ActivityIndicator color="#32a060" /> : <Text className="text-sage-400 text-sm">Carregar mais</Text>}
+              </TouchableOpacity>
             )}
           </>
         )}
@@ -619,6 +675,11 @@ export default function PetDetailScreen() {
                   </View>
                 );
               })
+            )}
+            {hasMore.procedures && (
+              <TouchableOpacity onPress={() => loadMore("procedures")} disabled={loadingMore} className="items-center py-3">
+                {loadingMore ? <ActivityIndicator color="#32a060" /> : <Text className="text-sage-400 text-sm">Carregar mais</Text>}
+              </TouchableOpacity>
             )}
           </>
         )}
@@ -766,6 +827,18 @@ export default function PetDetailScreen() {
                   );
                 })}
               </>
+            )}
+            {(hasMore.incidents || hasMore.logs) && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (hasMore.incidents) loadMore("incidents");
+                  else loadMore("logs");
+                }}
+                disabled={loadingMore}
+                className="items-center py-3"
+              >
+                {loadingMore ? <ActivityIndicator color="#32a060" /> : <Text className="text-sage-400 text-sm">Carregar mais</Text>}
+              </TouchableOpacity>
             )}
           </>
         )}
