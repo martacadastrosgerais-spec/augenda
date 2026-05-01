@@ -77,7 +77,7 @@ Tasks simples e bem definidas. Usar quando:
 | Produto | Epic 9 | Dashboard "hoje" com alertas e lembretes | ✅ |
 | Técnico | Infra | CI/CD com GitHub Actions | ✅ |
 | Produto | Epic 3 | Push notifications remotas (FCM/APNs) | [ ] Aguarda `eas init` |
-| Produto | Epic 14 | **Registro de adversidades/incidentes com foto** — vômito, lesão, comportamento anormal | [ ] |
+| Produto | Epic 14 | **Registro de adversidades/incidentes com foto** — vômito, lesão, comportamento anormal | ✅ |
 
 **Notas Epic 14 (Adversidades):** Tutora registra um evento inesperado (vômito, diarreia, ferida, comportamento) com descrição, foto opcional, data/hora e categoria. Objetivo: ter histórico preciso para contar ao veterinário. Tabela `incidents` (pet_id, occurred_at, category, description, photo_url, created_at). Categorias: `vomit | diarrhea | wound | behavior | allergy_reaction | other`. Upload de foto no bucket `pet-incidents` (Supabase Storage). Aparece na timeline do pet e pode ser referenciado no diário clínico.
 
@@ -91,10 +91,10 @@ Tasks simples e bem definidas. Usar quando:
 | Produto | Epic 10 | Condições crônicas | ✅ |
 | Produto | Epic 1 | OCR de carteira de vacinas (Claude Vision) | ✅ |
 | Produto | Epic 11 | Lembrete de recompra de medicamento | ✅ |
-| Produto | Epic 12 | **Controle de banho e tosa** — registro e lembrete recorrente | [ ] |
+| Produto | Epic 12 | **Controle de banho e tosa** — registro e lembrete recorrente | ✅ |
 | Produto | Epic 11 | **ML Wishlist** — busca real + adicionar à lista de desejos do ML | [ ] Aguarda credenciais ML |
-| Produto | Epic 13 | **Agente conversacional** — cadastro por linguagem natural | [ ] |
-| Produto | Epic 1 | Documentos — upload de exames PDF/foto | [ ] |
+| Produto | Epic 13 | **Agente conversacional** — cadastro por linguagem natural | ✅ |
+| Produto | Epic 1 | Documentos — upload de exames PDF/foto | ✅ |
 | Produto | Epic 1 | Arquivar pet (sem deletar histórico) | [ ] |
 | Técnico | Infra | Paginação nas listas | [ ] |
 | Técnico | Infra | Modo offline básico (cache local) | [ ] |
@@ -122,8 +122,9 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tabela | Descrição | Epic | Prioridade |
 |--------|-----------|------|------------|
-| `incidents` | Adversidades/incidentes com foto | 14 | P1 |
-| `grooming_logs` | Banho, tosa, próxima data | 12 | P2 |
+| `incidents` | Adversidades/incidentes com foto | 14 | ✅ |
+| `grooming_logs` | Banho, tosa, próxima data | 12 | ✅ |
+| `attachments` | Documentos anexados a procedimentos | 1 | ✅ |
 | `weight_logs` | Histórico de peso por data | — | ✅ |
 
 ---

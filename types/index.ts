@@ -159,6 +159,19 @@ export interface Incident {
   created_at: string;
 }
 
+export type GroomingType = "bath" | "grooming" | "both";
+
+export interface GroomingLog {
+  id: string;
+  pet_id: string;
+  type: GroomingType;
+  performed_at: string;
+  groomer_name?: string;
+  notes?: string;
+  next_at?: string;
+  created_at: string;
+}
+
 export interface WeightLog {
   id: string;
   pet_id: string;

@@ -20,7 +20,7 @@ import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatDateISO, getAge } from "@/lib/utils";
-import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory } from "@/types";
+import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType } from "@/types";
 
 
 const SEX_LABEL: Record<string, string> = { male: "Macho", female: "Fêmea" };
@@ -33,6 +33,12 @@ const INCIDENT_CONFIG: Record<IncidentCategory, { label: string; icon: string; c
   allergy_reaction: { label: "Reação alérgica", icon: "🤧", color: "text-purple-600", bg: "bg-purple-50" },
   other:            { label: "Outro",           icon: "❓", color: "text-sage-600",   bg: "bg-sage-50"   },
 };
+const GROOMING_CONFIG: Record<GroomingType, { label: string; icon: string }> = {
+  bath:     { label: "Banho",        icon: "water-outline" },
+  grooming: { label: "Tosa",         icon: "cut-outline" },
+  both:     { label: "Banho + Tosa", icon: "sparkles-outline" },
+};
+
 const SEVERITY_CONFIG = {
   low:    { label: "Normal",  color: "bg-sage-100",  textColor: "text-sage-600" },
   medium: { label: "Atenção", color: "bg-amber-100", textColor: "text-amber-600" },
@@ -58,6 +64,7 @@ export default function PetDetailScreen() {
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [groomingLogs, setGroomingLogs] = useState<GroomingLog[]>([]);
   const [conditions, setConditions] = useState<ChronicCondition[]>([]);
   const [lastDoses, setLastDoses] = useState<Record<string, string>>({});
   const [addingCondition, setAddingCondition] = useState(false);
@@ -81,15 +88,16 @@ export default function PetDetailScreen() {
   );
 
   async function fetchData() {
-    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes] = await Promise.all([
+    const [petRes, vaccinesRes, medsRes, procsRes, logsRes, condRes, dosesRes, incidentsRes, groomingRes] = await Promise.all([
       supabase.from("pets").select("*").eq("id", id).single(),
       supabase.from("vaccines").select("*").eq("pet_id", id).order("applied_at", { ascending: false }),
       supabase.from("medications").select("*").eq("pet_id", id).order("started_at", { ascending: false }),
-      supabase.from("procedures").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
+      supabase.from("procedures").select("*, attachments(*)").eq("pet_id", id).order("performed_at", { ascending: false }),
       supabase.from("symptom_logs").select("*").eq("pet_id", id).order("noted_at", { ascending: false }),
       supabase.from("chronic_conditions").select("*").eq("pet_id", id).order("created_at"),
       supabase.from("medication_doses").select("medication_id, administered_at").eq("pet_id", id).order("administered_at", { ascending: false }),
       supabase.from("incidents").select("*").eq("pet_id", id).order("occurred_at", { ascending: false }),
+      supabase.from("grooming_logs").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
     ]);
 
     if (petRes.error) Alert.alert("Erro", petRes.error.message);
@@ -101,6 +109,7 @@ export default function PetDetailScreen() {
     setLogs(logsRes.data ?? []);
     setConditions((condRes as any).data ?? []);
     setIncidents((incidentsRes.data ?? []) as Incident[]);
+    setGroomingLogs((groomingRes.data ?? []) as GroomingLog[]);
 
     const doseMap: Record<string, string> = {};
     for (const d of (dosesRes.data ?? []) as MedicationDose[]) {
@@ -507,33 +516,140 @@ export default function PetDetailScreen() {
                 <Text className="text-sage-300 text-lg">Nenhum procedimento registrado</Text>
               </View>
             ) : (
-              procedures.map((item) => (
-                <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2 mb-0.5">
-                        <View className="bg-sage-100 px-2 py-0.5 rounded-full">
-                          <Text className="text-sage-600 text-xs font-medium">
-                            {PROCEDURE_TYPE_LABEL[item.type]}
-                          </Text>
+              procedures.map((item) => {
+                const attachments = (item.attachments ?? []) as Attachment[];
+                return (
+                  <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-1">
+                        <View className="flex-row items-center gap-2 mb-0.5">
+                          <View className="bg-sage-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-sage-600 text-xs font-medium">
+                              {PROCEDURE_TYPE_LABEL[item.type]}
+                            </Text>
+                          </View>
+                          {attachments.length > 0 && (
+                            <View className="bg-blue-50 px-2 py-0.5 rounded-full flex-row items-center gap-1">
+                              <Ionicons name="attach" size={10} color="#3b82f6" />
+                              <Text className="text-blue-500 text-xs font-medium">{attachments.length}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text className="font-semibold text-sage-800">{item.title}</Text>
+                        {item.vet_name && (
+                          <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
+                        )}
+                      </View>
+                      <Text className="text-sage-600 text-sm font-medium">
+                        {formatDateISO(item.performed_at)}
+                      </Text>
+                    </View>
+                    {item.description && (
+                      <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
+                        {item.description}
+                      </Text>
+                    )}
+                    {attachments.length > 0 && (
+                      <View className="mt-2 pt-2 border-t border-sage-100 gap-1">
+                        {attachments.map((att) => (
+                          <TouchableOpacity
+                            key={att.id}
+                            onPress={() => Linking.openURL(att.file_url)}
+                            className="flex-row items-center gap-2 bg-sage-50 rounded-lg px-3 py-2"
+                          >
+                            <Ionicons
+                              name={att.file_type === "application/pdf" ? "document-text-outline" : "image-outline"}
+                              size={14}
+                              color="#32a060"
+                            />
+                            <Text className="text-sage-600 text-xs flex-1" numberOfLines={1}>{att.name}</Text>
+                            <Ionicons name="open-outline" size={12} color="#60b880" />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push({
+                          pathname: `/(app)/pet/${id}/add-document` as any,
+                          params: { procedureId: item.id, procedureTitle: item.title },
+                        })
+                      }
+                      className="mt-2 flex-row items-center justify-center gap-1 border border-sage-200 rounded-xl py-2"
+                    >
+                      <Ionicons name="attach" size={14} color="#165c39" />
+                      <Text className="text-sage-600 text-xs font-medium">Anexar documento</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
+            )}
+          </>
+        )}
+
+        {activeTab === "procedures" && (
+          <>
+            {/* Grooming section */}
+            <View className="flex-row items-center gap-2 mt-2 mb-2">
+              <View className="flex-1 h-px bg-sage-100" />
+              <Text className="text-xs font-semibold text-sage-400 uppercase tracking-wide">Higiene</Text>
+              <View className="flex-1 h-px bg-sage-100" />
+            </View>
+
+            <TouchableOpacity
+              className="bg-teal-500 rounded-xl py-3 flex-row items-center justify-center mb-3"
+              onPress={() =>
+                router.push({
+                  pathname: `/(app)/pet/${id}/add-grooming` as any,
+                  params: { petName: pet.name },
+                })
+              }
+            >
+              <Ionicons name="water-outline" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">Registrar banho / tosa</Text>
+            </TouchableOpacity>
+
+            {groomingLogs.length === 0 ? (
+              <View className="items-center mt-4 mb-4">
+                <Text className="text-sage-300 text-sm">Nenhum registro de higiene</Text>
+              </View>
+            ) : (
+              groomingLogs.map((item) => {
+                const cfg = GROOMING_CONFIG[item.type as GroomingType] ?? GROOMING_CONFIG.bath;
+                const d = new Date(item.performed_at);
+                const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                return (
+                  <View key={item.id} className="bg-white rounded-xl p-4 mb-2 shadow-sm border-l-4 border-teal-300">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <View className="bg-teal-50 rounded-full p-1.5">
+                          <Ionicons name={cfg.icon as any} size={14} color="#0d9488" />
+                        </View>
+                        <View>
+                          <Text className="font-semibold text-sage-800 text-sm">{cfg.label}</Text>
+                          {item.groomer_name ? (
+                            <Text className="text-sage-500 text-xs">{item.groomer_name}</Text>
+                          ) : null}
                         </View>
                       </View>
-                      <Text className="font-semibold text-sage-800">{item.title}</Text>
-                      {item.vet_name && (
-                        <Text className="text-sage-500 text-xs mt-0.5">Dr(a). {item.vet_name}</Text>
-                      )}
+                      <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
                     </View>
-                    <Text className="text-sage-600 text-sm font-medium">
-                      {formatDateISO(item.performed_at)}
-                    </Text>
+                    {item.notes ? (
+                      <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
+                        {item.notes}
+                      </Text>
+                    ) : null}
+                    {item.next_at ? (
+                      <View className="mt-2 flex-row items-center gap-1">
+                        <Ionicons name="calendar-outline" size={11} color="#0d9488" />
+                        <Text className="text-teal-600 text-xs">
+                          Próxima: {formatDateISO(item.next_at)}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
-                  {item.description && (
-                    <Text className="text-sage-400 text-xs mt-2 pt-2 border-t border-sage-100">
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
-              ))
+                );
+              })
             )}
           </>
         )}
