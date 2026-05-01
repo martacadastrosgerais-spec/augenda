@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType } from "@/types";
 
@@ -81,6 +82,7 @@ export default function PetDetailScreen() {
   const [mlQuery, setMlQuery] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState({ vaccines: false, medications: false, procedures: false, logs: false, incidents: false });
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,35 +107,69 @@ export default function PetDetailScreen() {
       supabase.from("grooming_logs").select("*").eq("pet_id", id).order("performed_at", { ascending: false }),
     ]);
 
-    if (petRes.error) Alert.alert("Erro", petRes.error.message);
-    else setPet(petRes.data);
+    if (petRes.error) {
+      const cached = await cacheGet<any>(`pet_detail_${id}`);
+      if (cached) {
+        setPet(cached.pet);
+        setVaccines(cached.vaccines ?? []);
+        setMedications(cached.medications ?? []);
+        setProcedures(cached.procedures ?? []);
+        setLogs(cached.logs ?? []);
+        setConditions(cached.conditions ?? []);
+        setIncidents(cached.incidents ?? []);
+        setGroomingLogs(cached.groomingLogs ?? []);
+        setLastDoses(cached.lastDoses ?? {});
+        setIsOffline(true);
+      } else {
+        Alert.alert("Erro", petRes.error.message);
+      }
+      setLoading(false);
+      return;
+    }
+
+    setPet(petRes.data);
 
     const vaccData = vaccinesRes.data ?? [];
     const medsData = medsRes.data ?? [];
     const procsData = procsRes.data ?? [];
     const logsData = logsRes.data ?? [];
     const incData = (incidentsRes.data ?? []) as Incident[];
-
-    setVaccines(vaccData as Vaccine[]);
-    setMedications(medsData as Medication[]);
-    setProcedures(procsData as Procedure[]);
-    setLogs(logsData as SymptomLog[]);
-    setConditions((condRes as any).data ?? []);
-    setIncidents(incData);
-    setGroomingLogs((groomingRes.data ?? []) as GroomingLog[]);
-    setHasMore({
-      vaccines:   vaccData.length === PAGE_SIZE,
-      medications: medsData.length === PAGE_SIZE,
-      procedures: procsData.length === PAGE_SIZE,
-      logs:       logsData.length === PAGE_SIZE,
-      incidents:  incData.length === PAGE_SIZE,
-    });
+    const groomData = (groomingRes.data ?? []) as GroomingLog[];
+    const condData = (condRes as any).data ?? [];
 
     const doseMap: Record<string, string> = {};
     for (const d of (dosesRes.data ?? []) as MedicationDose[]) {
       if (!doseMap[d.medication_id]) doseMap[d.medication_id] = d.administered_at;
     }
+
+    setVaccines(vaccData as Vaccine[]);
+    setMedications(medsData as Medication[]);
+    setProcedures(procsData as Procedure[]);
+    setLogs(logsData as SymptomLog[]);
+    setConditions(condData);
+    setIncidents(incData);
+    setGroomingLogs(groomData);
     setLastDoses(doseMap);
+    setIsOffline(false);
+    setHasMore({
+      vaccines:    vaccData.length === PAGE_SIZE,
+      medications: medsData.length === PAGE_SIZE,
+      procedures:  procsData.length === PAGE_SIZE,
+      logs:        logsData.length === PAGE_SIZE,
+      incidents:   incData.length === PAGE_SIZE,
+    });
+
+    await cacheSet(`pet_detail_${id}`, {
+      pet: petRes.data,
+      vaccines: vaccData,
+      medications: medsData,
+      procedures: procsData,
+      logs: logsData,
+      conditions: condData,
+      incidents: incData,
+      groomingLogs: groomData,
+      lastDoses: doseMap,
+    });
 
     setLoading(false);
   }
@@ -307,6 +343,13 @@ export default function PetDetailScreen() {
 
       <ScrollView className="flex-1 bg-cream rounded-t-3xl" style={{ marginTop: -12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View style={{ height: 16 }} />
+
+      {isOffline && (
+        <View className="mx-5 mb-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 flex-row items-center gap-2">
+          <Ionicons name="cloud-offline-outline" size={14} color="#d97706" />
+          <Text className="text-amber-700 text-xs flex-1">Sem conexão — dados em cache</Text>
+        </View>
+      )}
 
       {pet.archived && (
         <View className="mx-5 mb-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex-row items-center gap-3">

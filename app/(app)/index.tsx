@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { FormError } from "@/components/FormError";
 import { formatDateISO, getAge } from "@/lib/utils";
 import type { Pet } from "@/types";
@@ -70,6 +71,7 @@ export default function PetsScreen() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
   const [userName, setUserName] = useState("");
 
   useFocusEffect(
@@ -104,7 +106,9 @@ export default function PetsScreen() {
     ]);
 
     if (ownedRes.error || memberRes.error) {
-      setError("Não foi possível carregar os pets.");
+      const cached = await cacheGet<PetListItem[]>(`pets_${user!.id}`);
+      if (cached) { setPets(cached); setIsOffline(true); }
+      else setError("Não foi possível carregar os pets.");
       return;
     }
 
@@ -116,7 +120,10 @@ export default function PetsScreen() {
       .map((p: Pet) => ({ ...p, isOwner: false }));
 
     const ownedIds = new Set(ownedList.map((p) => p.id));
-    setPets([...ownedList, ...memberList.filter((p) => !ownedIds.has(p.id))]);
+    const combined = [...ownedList, ...memberList.filter((p) => !ownedIds.has(p.id))];
+    setPets(combined);
+    setIsOffline(false);
+    await cacheSet(`pets_${user!.id}`, combined);
   }
 
   async function fetchArchivedPets() {
@@ -273,6 +280,12 @@ export default function PetsScreen() {
 
       {/* Conteúdo claro arredondado */}
       <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
+        {isOffline && (
+          <View className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex-row items-center gap-2">
+            <Ionicons name="cloud-offline-outline" size={14} color="#d97706" />
+            <Text className="text-amber-700 text-xs flex-1">Sem conexão — dados em cache</Text>
+          </View>
+        )}
         <FormError message={error} />
 
         <FlatList
