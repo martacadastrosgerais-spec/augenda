@@ -25,6 +25,8 @@ type ActionType =
   | "add_incident"
   | "add_log"
   | "add_procedure"
+  | "add_grooming"
+  | "add_weight"
   | "unknown";
 
 interface ParsedAction {
@@ -50,6 +52,8 @@ const ACTION_LABELS: Record<ActionType, string> = {
   add_incident:   "Adversidade",
   add_log:        "Anotação",
   add_procedure:  "Procedimento",
+  add_grooming:   "Higiene",
+  add_weight:     "Peso",
   unknown:        "Dúvida",
 };
 
@@ -60,6 +64,8 @@ const ACTION_COLORS: Record<ActionType, string> = {
   add_incident:   "bg-red-100 text-red-700",
   add_log:        "bg-amber-100 text-amber-700",
   add_procedure:  "bg-purple-100 text-purple-700",
+  add_grooming:   "bg-teal-100 text-teal-700",
+  add_weight:     "bg-indigo-100 text-indigo-700",
   unknown:        "bg-gray-100 text-gray-600",
 };
 
@@ -83,11 +89,15 @@ const FIELD_LABELS: Record<string, string> = {
   category: "Categoria", description: "Descrição", occurred_at: "Quando",
   medication_name: "Medicamento", administered_at: "Administrada em",
   severity: "Gravidade", noted_at: "Quando",
+  groomer_name: "Profissional", weight_kg: "Peso (kg)", measured_at: "Medido em",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
   vomit: "Vômito", diarrhea: "Diarreia", wound: "Ferida/Lesão",
   behavior: "Comportamento", allergy_reaction: "Reação alérgica", other: "Outro",
+};
+const GROOMING_TYPE_LABELS: Record<string, string> = {
+  bath: "Banho", grooming: "Tosa", both: "Banho + Tosa",
 };
 const PROCEDURE_TYPE_LABELS: Record<string, string> = {
   consultation: "Consulta", surgery: "Cirurgia", exam: "Exame", other: "Outro",
@@ -96,8 +106,9 @@ const SEVERITY_LABELS: Record<string, string> = {
   low: "Normal", medium: "Atenção", high: "Urgente",
 };
 
-function displayValue(key: string, value: any): string {
+function displayValue(key: string, value: any, action?: ActionType): string {
   if (key === "category") return CATEGORY_LABELS[value] ?? value;
+  if (key === "type" && action === "add_grooming") return GROOMING_TYPE_LABELS[value] ?? value;
   if (key === "type") return PROCEDURE_TYPE_LABELS[value] ?? value;
   if (key === "severity") return SEVERITY_LABELS[value] ?? value;
   return formatFieldValue(key, value);
@@ -120,7 +131,7 @@ Data/hora atual: ${today} — ${nowISO}
 
 Responda SEMPRE com JSON válido, sem markdown, sem texto fora do JSON:
 {
-  "action": "add_vaccine" | "add_medication" | "add_dose" | "add_incident" | "add_log" | "add_procedure" | "unknown",
+  "action": "add_vaccine" | "add_medication" | "add_dose" | "add_incident" | "add_log" | "add_procedure" | "add_grooming" | "add_weight" | "unknown",
   "pet_id": "uuid do pet ou vazio se não identificado",
   "pet_name": "nome do pet",
   "data": { campos da ação },
@@ -134,6 +145,8 @@ Campos por ação:
 - add_incident: { category ("vomit"|"diarrhea"|"wound"|"behavior"|"allergy_reaction"|"other"), description, occurred_at (ISO timestamp) }
 - add_log: { description, severity ("low"|"medium"|"high"), noted_at (ISO timestamp) }
 - add_procedure: { title, type ("consultation"|"surgery"|"exam"|"other"), performed_at (YYYY-MM-DD), vet_name (ou null) }
+- add_grooming: { type ("bath"|"grooming"|"both"), performed_at (YYYY-MM-DD), groomer_name (ou null), notes (ou null) }
+- add_weight: { weight_kg (number), measured_at (YYYY-MM-DD), notes (ou null) }
 - unknown: quando faltar informação essencial — use "confirmation" para pedir o que falta
 
 Datas relativas: "hoje" = ${today}, "agora" = ${nowISO}. Interprete "às 14h" como hora de hoje.
@@ -235,6 +248,25 @@ async function saveAction(action: ParsedAction, userId: string): Promise<string>
     return `Procedimento **${data.title}** registrado para ${action.pet_name}.`;
   }
 
+  if (type === "add_grooming") {
+    const { error } = await supabase.from("grooming_logs").insert({
+      pet_id, type: data.type, performed_at: data.performed_at + "T12:00:00",
+      groomer_name: data.groomer_name || null, notes: data.notes || null,
+    });
+    if (error) throw error;
+    const labels: Record<string, string> = { bath: "Banho", grooming: "Tosa", both: "Banho + Tosa" };
+    return `${labels[data.type] ?? "Higiene"} registrado para ${action.pet_name}.`;
+  }
+
+  if (type === "add_weight") {
+    const { error } = await supabase.from("weight_logs").insert({
+      pet_id, weight_kg: data.weight_kg,
+      measured_at: data.measured_at, notes: data.notes || null,
+    });
+    if (error) throw error;
+    return `Peso de ${data.weight_kg} kg registrado para ${action.pet_name}.`;
+  }
+
   throw new Error("Ação desconhecida.");
 }
 
@@ -245,7 +277,7 @@ export default function AssistantScreen() {
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Pode me contar o que aconteceu com seus pets e eu registro para você. Por exemplo:\n\n• \"Pipo tomou Bravecto hoje\"\n• \"Bento vomitou às 14h\"\n• \"Serafim foi na consulta de rotina ontem\"",
+      text: "Olá! Pode me contar o que aconteceu com seus pets e eu registro para você. Por exemplo:\n\n• \"Pipo tomou Bravecto hoje\"\n• \"Bento vomitou às 14h\"\n• \"Serafim foi na consulta de rotina ontem\"\n• \"Mel tomou banho hoje, pesou 8,5 kg\"",
     },
   ]);
   const [input, setInput] = useState("");
@@ -376,7 +408,7 @@ export default function AssistantScreen() {
                   {Object.entries(item.action.data)
                     .filter(([, v]) => v !== null && v !== undefined && v !== "")
                     .map(([key, value]) => {
-                      const displayed = displayValue(key, value);
+                      const displayed = displayValue(key, value, item.action.action);
                       if (!displayed) return null;
                       return (
                         <View key={key} className="flex-row gap-2">
