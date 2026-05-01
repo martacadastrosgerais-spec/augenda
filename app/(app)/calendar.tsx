@@ -50,7 +50,7 @@ const RECURRENCE_LABEL: Record<string, string> = {
 
 // ─── Timeline ───────────────────────────────────────────────────────────────
 
-type TimelineEventType = "vaccine" | "medication_start" | "medication_end" | "procedure" | "symptom";
+type TimelineEventType = "vaccine" | "medication_start" | "medication_end" | "procedure" | "symptom" | "incident" | "grooming";
 
 interface TimelineEntry {
   id: string;
@@ -73,6 +73,8 @@ const TIMELINE_CONFIG: Record<TimelineEventType, { label: string; color: string;
   medication_end:   { label: "Fim do tratamento",  color: "bg-orange-100", textColor: "text-orange-600", icon: "medical-outline" },
   procedure:        { label: "Procedimento",        color: "bg-purple-100", textColor: "text-purple-600", icon: "document-text-outline" },
   symptom:          { label: "Anotação",            color: "bg-sage-100",   textColor: "text-sage-600",   icon: "journal-outline" },
+  incident:         { label: "Adversidade",         color: "bg-red-100",    textColor: "text-red-600",    icon: "alert-circle-outline" },
+  grooming:         { label: "Higiene",             color: "bg-teal-100",   textColor: "text-teal-600",   icon: "water-outline" },
 };
 
 const SYMPTOM_SEVERITY: Record<string, { color: string; textColor: string }> = {
@@ -276,11 +278,13 @@ export default function CalendarScreen() {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const [vacRes, medRes, procRes, logRes] = await Promise.all([
+    const [vacRes, medRes, procRes, logRes, incRes, groomRes] = await Promise.all([
       supabase.from("vaccines").select("id, pet_id, name, applied_at").in("pet_id", petIds).lte("applied_at", today).order("applied_at", { ascending: false }).limit(60),
       supabase.from("medications").select("id, pet_id, name, started_at, ends_at, active").in("pet_id", petIds).order("started_at", { ascending: false }).limit(60),
       supabase.from("procedures").select("id, pet_id, type, title, performed_at, description").in("pet_id", petIds).lte("performed_at", today).order("performed_at", { ascending: false }).limit(60),
       supabase.from("symptom_logs").select("id, pet_id, noted_at, description, severity").in("pet_id", petIds).order("noted_at", { ascending: false }).limit(60),
+      supabase.from("incidents").select("id, pet_id, occurred_at, category, description").in("pet_id", petIds).order("occurred_at", { ascending: false }).limit(40),
+      supabase.from("grooming_logs").select("id, pet_id, performed_at, type, groomer_name").in("pet_id", petIds).order("performed_at", { ascending: false }).limit(40),
     ]);
 
     const entries: TimelineEntry[] = [];
@@ -335,6 +339,31 @@ export default function CalendarScreen() {
       date: l.noted_at.split("T")[0],
       datetime: l.noted_at,
       severity: l.severity,
+    }));
+
+    const INCIDENT_LABEL: Record<string, string> = {
+      vomit: "Vômito", diarrhea: "Diarreia", wound: "Ferida / Lesão",
+      behavior: "Comportamento", allergy_reaction: "Reação alérgica", other: "Outro",
+    };
+    (incRes.data ?? []).forEach((i) => entries.push({
+      id: `inc-${i.id}`,
+      petName: petMap[i.pet_id] ?? "",
+      eventType: "incident",
+      title: i.description.length > 60 ? i.description.slice(0, 57) + "…" : i.description,
+      date: i.occurred_at.split("T")[0],
+      datetime: i.occurred_at,
+      note: INCIDENT_LABEL[i.category] ?? i.category,
+    }));
+
+    const GROOMING_LABEL: Record<string, string> = { bath: "Banho", grooming: "Tosa", both: "Banho + Tosa" };
+    (groomRes.data ?? []).forEach((g) => entries.push({
+      id: `groom-${g.id}`,
+      petName: petMap[g.pet_id] ?? "",
+      eventType: "grooming",
+      title: GROOMING_LABEL[g.type] ?? g.type,
+      date: g.performed_at.split("T")[0],
+      datetime: g.performed_at,
+      note: g.groomer_name ?? undefined,
     }));
 
     // Sort descending
