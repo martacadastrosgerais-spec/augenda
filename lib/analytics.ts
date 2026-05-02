@@ -1,9 +1,12 @@
 import Constants from "expo-constants";
 
-const KEY = Constants.expoConfig?.extra?.posthogKey as string | undefined;
 const HOST = "https://app.posthog.com";
 
 let _distinctId: string | null = null;
+
+function getKey(): string | undefined {
+  return Constants.expoConfig?.extra?.posthogKey as string | undefined;
+}
 
 export function setAnalyticsUser(userId: string) {
   _distinctId = userId;
@@ -14,6 +17,7 @@ export function clearAnalyticsUser() {
 }
 
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
+  const KEY = getKey();
   if (!KEY || !_distinctId) return;
   fetch(`${HOST}/capture/`, {
     method: "POST",
