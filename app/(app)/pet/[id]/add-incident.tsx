@@ -19,6 +19,7 @@ import { FormError } from "@/components/FormError";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { IncidentCategory } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { hapticSuccess } from "@/lib/haptics";
 
 const CATEGORIES: { value: IncidentCategory; label: string; icon: string; color: string; bg: string }[] = [
   { value: "vomit",            label: "Vômito",          icon: "🤢", color: "border-amber-400",  bg: "bg-amber-50"  },
@@ -124,6 +125,7 @@ export default function AddIncidentScreen() {
     }
 
     setLoading(false);
+    hapticSuccess();
     trackEvent("incident_logged", { pet_id: id, category });
     router.replace(`/(app)/pet/${id}` as any);
   }

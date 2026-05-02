@@ -19,6 +19,7 @@ import { FormError } from "@/components/FormError";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import { scheduleLocalReminder } from "@/lib/notifications";
 import { trackEvent } from "@/lib/analytics";
+import { hapticSuccess } from "@/lib/haptics";
 
 const RESTOCK_OPTIONS = [
   { label: "3 dias antes", value: 3 },
@@ -107,6 +108,7 @@ export default function AddMedicationScreen() {
     }
 
     setLoading(false);
+    hapticSuccess();
     trackEvent("medication_added", { pet_id: id });
     router.replace(`/(app)/pet/${id}` as any);
   }

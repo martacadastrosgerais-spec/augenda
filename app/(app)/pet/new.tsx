@@ -21,6 +21,7 @@ import { DOG_BREEDS, CAT_BREEDS } from "@/constants/breeds";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { Species } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { hapticSuccess } from "@/lib/haptics";
 
 async function uploadPhoto(petId: string, base64: string): Promise<string | null> {
   try {
@@ -137,6 +138,7 @@ export default function NewPetScreen() {
     }
 
     setLoading(false);
+    hapticSuccess();
     trackEvent("pet_created", { species });
     router.replace("/(app)");
   }

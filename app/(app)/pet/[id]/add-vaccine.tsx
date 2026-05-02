@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { FormError } from "@/components/FormError";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import { hapticSuccess } from "@/lib/haptics";
 
 export default function AddVaccineScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,6 +53,7 @@ export default function AddVaccineScreen() {
       setError("Não foi possível salvar. Tente novamente.");
       console.error("[AddVaccine] insert error:", dbError);
     } else {
+      hapticSuccess();
       trackEvent("vaccine_added", { pet_id: id });
       router.replace(`/(app)/pet/${id}` as any);
     }
