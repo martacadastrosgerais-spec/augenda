@@ -95,9 +95,9 @@ Tasks simples e bem definidas. Usar quando:
 | Produto | Epic 11 | **ML Wishlist** — busca real + adicionar à lista de desejos do ML | [ ] Aguarda credenciais ML |
 | Produto | Epic 13 | **Agente conversacional** — cadastro por linguagem natural | ✅ |
 | Produto | Epic 1 | Documentos — upload de exames PDF/foto | ✅ |
-| Produto | Epic 1 | Arquivar pet (sem deletar histórico) | [ ] |
-| Técnico | Infra | Paginação nas listas | [ ] |
-| Técnico | Infra | Modo offline básico (cache local) | [ ] |
+| Produto | Epic 1 | Arquivar pet (sem deletar histórico) | ✅ |
+| Técnico | Infra | Paginação nas listas | ✅ |
+| Técnico | Infra | Modo offline básico (cache local) | ✅ |
 
 **Notas Epic 12 (Banho e Tosa):** Tabela `grooming_logs` (pet_id, type [`bath`|`grooming`|`both`], performed_at, groomer_name, notes, next_at). UI: aba ou seção na tela do pet. Lembrete recorrente automático baseado em `next_at`. Integra com a tabela `reminders`.
 
@@ -111,8 +111,8 @@ Tasks simples e bem definidas. Usar quando:
 
 | Tipo | Epic | Item | Status |
 |------|------|------|--------|
-| Produto | — | Compartilhamento social / relatório para veterinário | [ ] |
-| Produto | Epic 11 | Produtos recorrentes (ração, petisco) com ciclo estimado | [ ] |
+| Produto | — | Relatório para veterinário (compartilhamento) | ✅ |
+| Produto | Epic 11 | Produtos recorrentes (ração, petisco) com ciclo estimado | ✅ |
 | Técnico | Infra | i18n para expansão além do Brasil | [ ] |
 | Técnico | Infra | Analytics de uso (Posthog ou similar) | [ ] |
 

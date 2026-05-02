@@ -40,7 +40,7 @@ async function uploadFile(
       for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
     } else {
       const b64 = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
       const byteChars = atob(b64);
       bytes = new Uint8Array(byteChars.length);

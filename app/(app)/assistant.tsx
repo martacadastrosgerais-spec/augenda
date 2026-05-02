@@ -408,7 +408,7 @@ export default function AssistantScreen() {
                   {Object.entries(item.action.data)
                     .filter(([, v]) => v !== null && v !== undefined && v !== "")
                     .map(([key, value]) => {
-                      const displayed = displayValue(key, value, item.action.action);
+                      const displayed = displayValue(key, value, item.action!.action);
                       if (!displayed) return null;
                       return (
                         <View key={key} className="flex-row gap-2">
