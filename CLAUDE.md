@@ -114,7 +114,7 @@ Tasks simples e bem definidas. Usar quando:
 | Produto | — | Relatório para veterinário (compartilhamento) | ✅ |
 | Produto | Epic 11 | Produtos recorrentes (ração, petisco) com ciclo estimado | ✅ |
 | Técnico | Infra | i18n para expansão além do Brasil | [ ] |
-| Técnico | Infra | Analytics de uso (Posthog ou similar) | [ ] |
+| Técnico | Infra | Analytics de uso (Posthog ou similar) | ✅ HTTP API, ativa com EXPO_PUBLIC_POSTHOG_KEY |
 
 ---
 

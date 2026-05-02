@@ -448,7 +448,7 @@ export default function PetDetailScreen() {
     <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
       {/* Header verde escuro */}
       <View className="bg-sage-700 px-5 pt-4 pb-5 flex-row items-center">
-        <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3">
+        <TouchableOpacity onPress={() => router.replace("/(app)")} className="mr-3" accessibilityLabel="Voltar" accessibilityRole="button">
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-white flex-1">{pet.name}</Text>
@@ -485,18 +485,18 @@ export default function PetDetailScreen() {
               </>
             ) : (
               <>
-                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1">
+                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/edit` as any)} className="p-1" accessibilityLabel="Editar pet" accessibilityRole="button">
                   <Ionicons name="create-outline" size={22} color="#fff" />
                 </TouchableOpacity>
                 {!pet.archived && (
-                  <TouchableOpacity onPress={() => setConfirmArchive(true)} className="p-1">
+                  <TouchableOpacity onPress={() => setConfirmArchive(true)} className="p-1" accessibilityLabel="Arquivar pet" accessibilityRole="button">
                     <Ionicons name="archive-outline" size={21} color="#fde68a" />
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1">
+                <TouchableOpacity onPress={() => setConfirmDelete(true)} className="p-1" accessibilityLabel="Deletar pet" accessibilityRole="button">
                   <Ionicons name="trash-outline" size={22} color="#fca5a5" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1">
+                <TouchableOpacity onPress={() => router.push(`/(app)/pet/${id}/share`)} className="p-1" accessibilityLabel="Compartilhar cuidados" accessibilityRole="button">
                   <Ionicons name="people-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               </>

@@ -238,12 +238,16 @@ export default function PetsScreen() {
             <TouchableOpacity
               className="border border-sage-500 rounded-full w-10 h-10 items-center justify-center"
               onPress={() => router.push("/(app)/join")}
+              accessibilityLabel="Entrar com código de convite"
+              accessibilityRole="button"
             >
               <Ionicons name="enter-outline" size={20} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               className="bg-sage-400 rounded-full w-10 h-10 items-center justify-center"
               onPress={() => router.push("/(app)/pet/new")}
+              accessibilityLabel="Adicionar novo pet"
+              accessibilityRole="button"
             >
               <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
