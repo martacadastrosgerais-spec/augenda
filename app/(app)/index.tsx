@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,6 +73,7 @@ export default function PetsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState("");
 
   useFocusEffect(
@@ -86,6 +88,12 @@ export default function PetsScreen() {
     setError(null);
     await Promise.all([fetchPets(), fetchAlerts(), fetchUserName()]);
     setLoading(false);
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
   }
 
   async function fetchUserName() {
@@ -293,6 +301,9 @@ export default function PetsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />
+          }
           ListEmptyComponent={
             pets.length === 0 && alerts.length === 0 ? (
               <View className="items-center justify-center px-8 mt-16">

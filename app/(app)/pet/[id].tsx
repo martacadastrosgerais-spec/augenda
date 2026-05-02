@@ -12,6 +12,7 @@ import {
   Share,
   TextInput,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -97,6 +98,7 @@ export default function PetDetailScreen() {
   const [hasMore, setHasMore] = useState({ vaccines: false, medications: false, procedures: false, logs: false, incidents: false });
   const [loadingMore, setLoadingMore] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -413,6 +415,12 @@ export default function PetDetailScreen() {
     router.replace("/(app)");
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }
+
   async function handleArchive() {
     await supabase.from("pets").update({ archived: true }).eq("id", id);
     trackEvent("pet_archived", { pet_id: id });
@@ -497,7 +505,13 @@ export default function PetDetailScreen() {
         )}
       </View>
 
-      <ScrollView className="flex-1 bg-cream rounded-t-3xl" style={{ marginTop: -12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1 bg-cream rounded-t-3xl"
+        style={{ marginTop: -12 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />}
+      >
       <View style={{ height: 16 }} />
 
       {isOffline && (

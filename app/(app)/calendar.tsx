@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   Switch,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -133,6 +134,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const [panel, setPanel] = useState<Panel>("month");
 
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -167,6 +169,13 @@ export default function CalendarScreen() {
       }
     }, [user])
   );
+
+  async function handleRefresh() {
+    if (!user) return;
+    setRefreshing(true);
+    await Promise.all([fetchEvents(), fetchReminders(), fetchTimeline(), fetchMonthData()]);
+    setRefreshing(false);
+  }
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -484,6 +493,7 @@ export default function CalendarScreen() {
           keyExtractor={(_, i) => String(i)}
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />}
           ListHeaderComponent={
             <View>
               <MonthGrid
@@ -547,6 +557,7 @@ export default function CalendarScreen() {
             keyExtractor={(e) => e.id}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />}
             renderItem={({ item }) => {
               const cfg = EVENT_CONFIG[item.type];
               const isAdding = addingId === item.id;
@@ -595,6 +606,7 @@ export default function CalendarScreen() {
             keyExtractor={(r) => r.id}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />}
             renderItem={({ item }) => {
               const cfg = REMINDER_CONFIG[item.type];
               const petName = (item as any).pets?.name ?? "";
@@ -660,6 +672,7 @@ export default function CalendarScreen() {
             keyExtractor={(item) => item.kind === "header" ? `h-${item.date}` : item.entry.id}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />}
             renderItem={({ item }) => {
               if (item.kind === "header") {
                 return (
