@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  KeyboardAvoidingView,
   Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -173,7 +174,8 @@ export default function AddDocumentScreen() {
         <Text className="text-xl font-bold text-sage-700">Anexar documento</Text>
       </View>
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <FormError message={error} />
 
         {/* Contexto */}
@@ -266,6 +268,7 @@ export default function AddDocumentScreen() {
 
         {!picked && <View className="h-8" />}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

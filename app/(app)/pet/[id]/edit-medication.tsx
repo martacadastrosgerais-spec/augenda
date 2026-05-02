@@ -4,6 +4,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   ActivityIndicator,
   Switch,
@@ -133,7 +135,8 @@ export default function EditMedicationScreen() {
         <Text className="text-xl font-bold text-sage-700">Editar Medicamento</Text>
       </View>
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View className="bg-white rounded-2xl p-5 mt-4 shadow-sm">
           <FormError message={error} />
 
@@ -301,6 +304,7 @@ export default function EditMedicationScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
