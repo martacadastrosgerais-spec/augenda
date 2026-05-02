@@ -20,7 +20,7 @@ import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { cacheGet, cacheSet } from "@/lib/cache";
-import { formatDateISO, getAge } from "@/lib/utils";
+import { formatDateISO, getAge, nextPurchaseDate } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType, RecurringProduct, ProductCategory } from "@/types";
 
 
@@ -393,13 +393,9 @@ export default function PetDetailScreen() {
     );
   }
 
-  function getNextPurchaseDate(product: RecurringProduct): { dateStr: string; daysLeft: number } | null {
+  function getNextPurchaseDate(product: RecurringProduct) {
     if (!product.last_purchased_at) return null;
-    const next = new Date(product.last_purchased_at);
-    next.setDate(next.getDate() + product.cycle_days);
-    const daysLeft = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    const dateStr = `${String(next.getDate()).padStart(2, "0")}/${String(next.getMonth() + 1).padStart(2, "0")}/${next.getFullYear()}`;
-    return { dateStr, daysLeft };
+    return nextPurchaseDate(product.last_purchased_at, product.cycle_days);
   }
 
   async function handleDelete() {

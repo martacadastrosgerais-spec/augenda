@@ -1,4 +1,4 @@
-import { formatDateInput, parseDateBR, formatDateISO, getAge } from "@/lib/utils";
+import { formatDateInput, parseDateBR, formatDateISO, getAge, nextPurchaseDate } from "@/lib/utils";
 
 describe("formatDateInput", () => {
   it("retorna vazio para string vazia", () => {
@@ -120,5 +120,51 @@ describe("getAge", () => {
 
   it("retorna anos e dias quando meses = 0", () => {
     expect(getAge("2022-06-10")).toBe("2 anos e 5 dias");
+  });
+});
+
+describe("nextPurchaseDate", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-05-01T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("calcula data corretamente para ciclo de 30 dias", () => {
+    const { dateStr } = nextPurchaseDate("2026-04-01", 30);
+    expect(dateStr).toBe("01/05/2026");
+  });
+
+  it("calcula dias restantes positivos no futuro", () => {
+    const { daysLeft } = nextPurchaseDate("2026-04-20", 30);
+    // próxima = 2026-05-20, hoje = 2026-05-01, diff ≈ 19 dias
+    expect(daysLeft).toBeGreaterThan(0);
+    expect(daysLeft).toBeLessThanOrEqual(19);
+  });
+
+  it("retorna daysLeft negativo para produto vencido", () => {
+    const { daysLeft } = nextPurchaseDate("2026-03-01", 30);
+    // próxima = 2026-03-31, já passou
+    expect(daysLeft).toBeLessThan(0);
+  });
+
+  it("retorna daysLeft próximo de 0 para produto vencendo hoje/ontem", () => {
+    const { daysLeft } = nextPurchaseDate("2026-04-01", 30);
+    // próxima = 2026-05-01 = hoje; pode ser 0 ou -1 dependendo do timezone
+    expect(Math.abs(daysLeft)).toBeLessThanOrEqual(1);
+  });
+
+  it("formata dateStr como DD/MM/YYYY", () => {
+    const { dateStr } = nextPurchaseDate("2026-01-05", 10);
+    expect(dateStr).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(dateStr).toBe("15/01/2026");
+  });
+
+  it("funciona com ciclo de 365 dias", () => {
+    const { dateStr } = nextPurchaseDate("2025-05-01", 365);
+    expect(dateStr).toBe("01/05/2026");
   });
 });

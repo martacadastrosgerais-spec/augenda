@@ -21,6 +21,14 @@ export function formatDateISO(dateStr?: string): string {
   return `${day}/${month}/${year}`;
 }
 
+export function nextPurchaseDate(lastPurchasedAt: string, cycleDays: number): { dateStr: string; daysLeft: number } {
+  const next = new Date(lastPurchasedAt + "T00:00:00");
+  next.setDate(next.getDate() + cycleDays);
+  const daysLeft = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const dateStr = `${String(next.getDate()).padStart(2, "0")}/${String(next.getMonth() + 1).padStart(2, "0")}/${next.getFullYear()}`;
+  return { dateStr, daysLeft };
+}
+
 export function getAge(birthDate?: string): string | null {
   if (!birthDate) return null;
   const birth = new Date(birthDate + "T00:00:00");
