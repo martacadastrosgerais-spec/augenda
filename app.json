@@ -52,7 +52,8 @@
     "extra": {
       "eas": {
         "projectId": "configure-via-eas-init"
-      }
+      },
+      "posthogKey": "$EXPO_PUBLIC_POSTHOG_KEY"
     }
   }
 }

@@ -20,6 +20,7 @@ import QRCode from "react-native-qrcode-svg";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { trackEvent } from "@/lib/analytics";
 import { formatDateISO, getAge, nextPurchaseDate } from "@/lib/utils";
 import type { Pet, Vaccine, Medication, MedicationDose, Procedure, SymptomLog, ChronicCondition, Incident, IncidentCategory, Attachment, GroomingLog, GroomingType, RecurringProduct, ProductCategory } from "@/types";
 
@@ -143,6 +144,7 @@ export default function PetDetailScreen() {
     }
 
     setPet(petRes.data);
+    trackEvent("pet_viewed", { pet_id: id, species: petRes.data?.species });
 
     const vaccData = vaccinesRes.data ?? [];
     const medsData = medsRes.data ?? [];
@@ -246,6 +248,7 @@ export default function PetDetailScreen() {
 
   async function shareVetReport() {
     if (!pet) return;
+    trackEvent("vet_report_shared", { pet_id: id });
     const now = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const lines: string[] = [
       `RELATÓRIO DE SAÚDE — ${pet.name.toUpperCase()}`,
@@ -388,6 +391,7 @@ export default function PetDetailScreen() {
   async function markAsBought(productId: string) {
     const today = new Date().toISOString().split("T")[0];
     await supabase.from("recurring_products").update({ last_purchased_at: today }).eq("id", productId);
+    trackEvent("product_bought", { pet_id: id, product_id: productId });
     setRecurringProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, last_purchased_at: today } : p))
     );
@@ -411,6 +415,7 @@ export default function PetDetailScreen() {
 
   async function handleArchive() {
     await supabase.from("pets").update({ archived: true }).eq("id", id);
+    trackEvent("pet_archived", { pet_id: id });
     router.replace("/(app)");
   }
 

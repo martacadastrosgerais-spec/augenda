@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { FormError } from "@/components/FormError";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 export default function AddVaccineScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,6 +50,7 @@ export default function AddVaccineScreen() {
       setError("Não foi possível salvar. Tente novamente.");
       console.error("[AddVaccine] insert error:", dbError);
     } else {
+      trackEvent("vaccine_added", { pet_id: id });
       router.replace(`/(app)/pet/${id}` as any);
     }
   }

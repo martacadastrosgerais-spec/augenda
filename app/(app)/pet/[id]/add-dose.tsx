@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { FormError } from "@/components/FormError";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { MedicationDose } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 
 function nowDateString() {
   const d = new Date();
@@ -104,6 +105,7 @@ export default function AddDoseScreen() {
     if (dbError) {
       setError("Não foi possível salvar. Tente novamente.");
     } else {
+      trackEvent("dose_confirmed", { pet_id: id });
       router.replace(`/(app)/pet/${id}` as any);
     }
   }

@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerPushToken } from "@/lib/notifications";
+import { setAnalyticsUser, clearAnalyticsUser } from "@/lib/analytics";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,9 @@ function RootNavigator() {
 
     if (session?.user?.id) {
       registerPushToken(session.user.id);
+      setAnalyticsUser(session.user.id);
+    } else {
+      clearAnalyticsUser();
     }
   }, [session, loading, segments]);
 

@@ -20,6 +20,7 @@ import { FormError } from "@/components/FormError";
 import { DOG_BREEDS, CAT_BREEDS } from "@/constants/breeds";
 import { formatDateInput, parseDateBR } from "@/lib/utils";
 import type { Species } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 
 async function uploadPhoto(petId: string, base64: string): Promise<string | null> {
   try {
@@ -136,6 +137,7 @@ export default function NewPetScreen() {
     }
 
     setLoading(false);
+    trackEvent("pet_created", { species });
     router.replace("/(app)");
   }
 
