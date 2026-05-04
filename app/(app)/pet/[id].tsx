@@ -246,6 +246,138 @@ export default function PetDetailScreen() {
     }
   }
 
+  async function shareEmergencyCardPDF() {
+    if (!pet) return;
+    const activeMeds = medications.filter((m) => m.active);
+
+    const conditionsHtml = conditions.length > 0
+      ? `<div class="section purple">
+          <div class="section-title">🫀 Condições crônicas</div>
+          <div class="tags">${conditions.map((c) => `<span class="tag purple">${c.name}</span>`).join("")}</div>
+        </div>`
+      : "";
+
+    const allergiesHtml = pet.allergies
+      ? `<div class="section amber">
+          <div class="section-title">⚠️ Alergias e restrições</div>
+          <p>${pet.allergies}</p>
+        </div>`
+      : "";
+
+    const medsHtml = activeMeds.length > 0
+      ? `<div class="section">
+          <div class="section-title">💊 Medicamentos em uso</div>
+          ${activeMeds.map((m) => `<div class="item"><strong>${m.name}</strong>${m.dose ? ` — ${m.dose}` : ""}${m.frequency ? ` — ${m.frequency}` : ""}</div>`).join("")}
+        </div>`
+      : "";
+
+    const vaccinesHtml = vaccines.length > 0
+      ? `<div class="section">
+          <div class="section-title">🛡️ Vacinas recentes</div>
+          ${vaccines.slice(0, 5).map((v) => `<div class="item row"><span>${v.name}</span><span class="muted">${v.applied_at}</span></div>`).join("")}
+        </div>`
+      : "";
+
+    const contactsHtml = (pet.vet_name || pet.vet_phone || pet.emergency_contact_name || pet.emergency_contact_phone)
+      ? `<div class="section">
+          <div class="section-title">📞 Contatos</div>
+          ${pet.vet_name || pet.vet_phone ? `<div class="contact-block"><div class="contact-label">Veterinário</div>${pet.vet_name ? `<div>${pet.vet_name}</div>` : ""}${pet.vet_phone ? `<div class="muted">${pet.vet_phone}</div>` : ""}</div>` : ""}
+          ${pet.emergency_contact_name || pet.emergency_contact_phone ? `<div class="contact-block"><div class="contact-label">Contato de emergência</div>${pet.emergency_contact_name ? `<div>${pet.emergency_contact_name}</div>` : ""}${pet.emergency_contact_phone ? `<div class="muted red">${pet.emergency_contact_phone}</div>` : ""}</div>` : ""}
+        </div>`
+      : "";
+
+    const photoHtml = pet.photo_url
+      ? `<img src="${pet.photo_url}" class="pet-photo" />`
+      : `<div class="pet-photo-placeholder">${pet.species === "dog" ? "🐶" : "🐱"}</div>`;
+
+    const chips = [
+      pet.birth_date ? `<div class="chip"><div class="chip-label">Idade</div><div class="chip-val">${getAge(pet.birth_date)}</div></div>` : "",
+      pet.weight_kg != null ? `<div class="chip"><div class="chip-label">Peso</div><div class="chip-val">${pet.weight_kg} kg</div></div>` : "",
+      pet.microchip ? `<div class="chip"><div class="chip-label">Microchip</div><div class="chip-val">${pet.microchip}</div></div>` : "",
+    ].filter(Boolean).join("");
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; }
+  .header { background: #dc2626; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 700; }
+  .header p { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+  .identity { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #f0f0f0; }
+  .pet-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+  .pet-photo-placeholder { width: 72px; height: 72px; border-radius: 50%; background: #e8f5ee; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .pet-name { font-size: 22px; font-weight: 700; color: #165c39; }
+  .pet-sub { color: #888; font-size: 12px; margin-top: 3px; }
+  .chips { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .chip { background: #f0f9f4; border-radius: 10px; padding: 6px 12px; text-align: center; }
+  .chip-label { color: #888; font-size: 10px; }
+  .chip-val { color: #165c39; font-weight: 600; font-size: 12px; }
+  .section { padding: 14px 24px; border-bottom: 1px solid #f5f5f5; }
+  .section.purple { background: #faf5ff; }
+  .section.amber { background: #fffbeb; }
+  .section-title { font-weight: 700; font-size: 12px; color: #165c39; margin-bottom: 8px; }
+  .section.purple .section-title { color: #7c3aed; }
+  .section.amber .section-title { color: #d97706; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
+  .tag.purple { background: #fff; border: 1px solid #ddd8fe; color: #7c3aed; }
+  .item { padding: 4px 0; line-height: 1.5; }
+  .item.row { display: flex; justify-content: space-between; }
+  .muted { color: #888; font-size: 11px; }
+  .muted.red { color: #ef4444; }
+  .contact-block { margin-bottom: 10px; }
+  .contact-label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .footer { padding: 12px 24px; color: #bbb; font-size: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>🏥</div>
+  <div><h1>Cartão de Emergência</h1><p>AUgenda — Saúde Pet</p></div>
+</div>
+<div class="identity">
+  ${photoHtml}
+  <div>
+    <div class="pet-name">${pet.name}</div>
+    <div class="pet-sub">${pet.species === "dog" ? "Cão" : "Gato"}${pet.breed ? ` · ${pet.breed}` : ""}${pet.sex && pet.sex !== "unknown" ? ` · ${SEX_LABEL[pet.sex]}${pet.neutered ? " · Castrado(a)" : ""}` : ""}</div>
+    <div class="chips">${chips}</div>
+  </div>
+</div>
+${conditionsHtml}
+${allergiesHtml}
+${medsHtml}
+${vaccinesHtml}
+${contactsHtml}
+<div class="footer">Gerado pelo AUgenda — app de saúde pet</div>
+</body>
+</html>`;
+
+    if (Platform.OS === "web") {
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); }
+      return;
+    }
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: `Cartão de emergência — ${pet.name}`,
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Print.printAsync({ html });
+      }
+    } catch {
+      Share.share({ message: `Cartão de emergência de ${pet.name}: ${getEmergencyUrl()}` });
+    }
+  }
+
   function openMlSearch(medName: string) {
     setMlQuery(medName);
   }
@@ -1313,13 +1445,22 @@ ${vetHtml}
               <Text className="text-sage-300 text-xs mt-4 text-center" numberOfLines={1}>
                 {getEmergencyUrl()}
               </Text>
-              <TouchableOpacity
-                onPress={shareEmergencyCard}
-                className="mt-4 flex-row items-center gap-2 bg-red-50 rounded-xl px-5 py-3"
-              >
-                <Ionicons name="share-outline" size={16} color="#ef4444" />
-                <Text className="text-red-400 text-sm font-medium">Compartilhar link</Text>
-              </TouchableOpacity>
+              <View className="flex-row gap-3 mt-4">
+                <TouchableOpacity
+                  onPress={shareEmergencyCard}
+                  className="flex-1 flex-row items-center justify-center gap-2 bg-red-50 rounded-xl px-4 py-3"
+                >
+                  <Ionicons name="link-outline" size={16} color="#ef4444" />
+                  <Text className="text-red-400 text-sm font-medium">Link</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={shareEmergencyCardPDF}
+                  className="flex-1 flex-row items-center justify-center gap-2 bg-red-50 rounded-xl px-4 py-3"
+                >
+                  <Ionicons name="document-outline" size={16} color="#ef4444" />
+                  <Text className="text-red-400 text-sm font-medium">PDF</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity onPress={() => setShowQR(false)} className="mt-3">
                 <Text className="text-sage-400 text-sm">Fechar</Text>
               </TouchableOpacity>
