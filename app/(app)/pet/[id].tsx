@@ -14,6 +14,8 @@ import {
   Linking,
   RefreshControl,
 } from "react-native";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -251,93 +253,130 @@ export default function PetDetailScreen() {
   async function shareVetReport() {
     if (!pet) return;
     trackEvent("vet_report_shared", { pet_id: id });
+
     const now = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const lines: string[] = [
-      `RELATÓRIO DE SAÚDE — ${pet.name.toUpperCase()}`,
-      `Gerado em ${now}`,
-      "────────────────────────",
-      "",
-    ];
-
-    lines.push("INFORMAÇÕES BÁSICAS");
-    lines.push(`Espécie: ${pet.species === "dog" ? "Cão" : "Gato"}`);
-    if (pet.breed) lines.push(`Raça: ${pet.breed}`);
-    if (pet.birth_date) lines.push(`Nascimento: ${formatDateISO(pet.birth_date)} (${getAge(pet.birth_date)})`);
-    if (pet.weight_kg != null) lines.push(`Peso: ${pet.weight_kg} kg`);
-    if (pet.sex && pet.sex !== "unknown") lines.push(`Sexo: ${SEX_LABEL[pet.sex]}${pet.neutered ? " — castrado(a)" : ""}`);
-    if (pet.microchip) lines.push(`Microchip: ${pet.microchip}`);
-    if (pet.allergies) lines.push(`Alergias: ${pet.allergies}`);
-    lines.push("");
-
-    if (conditions.length > 0) {
-      lines.push("CONDIÇÕES CRÔNICAS");
-      conditions.forEach((c) => lines.push(`• ${c.name}${c.diagnosed_at ? ` (desde ${formatDateISO(c.diagnosed_at)})` : ""}`));
-      lines.push("");
-    }
-
     const activeMeds = medications.filter((m) => m.active);
-    if (activeMeds.length > 0) {
-      lines.push("MEDICAMENTOS ATIVOS");
-      activeMeds.forEach((m) => {
-        let line = `• ${m.name}`;
-        if (m.dose) line += ` — ${m.dose}`;
-        if (m.frequency) line += ` — ${m.frequency}`;
-        lines.push(line);
-      });
-      lines.push("");
+
+    function row(label: string, value: string) {
+      return `<tr><td class="label">${label}</td><td>${value}</td></tr>`;
+    }
+    function section(title: string, content: string) {
+      return `<div class="section"><h2>${title}</h2>${content}</div>`;
     }
 
-    if (vaccines.length > 0) {
-      lines.push("VACINAS");
-      vaccines.slice(0, 8).forEach((v) => {
-        let line = `• ${v.name} — ${formatDateISO(v.applied_at)}`;
-        if (v.next_dose_at) line += ` → próxima: ${formatDateISO(v.next_dose_at)}`;
-        lines.push(line);
-      });
-      lines.push("");
-    }
+    const basicRows = [
+      row("Espécie", pet.species === "dog" ? "Cão" : "Gato"),
+      pet.breed ? row("Raça", pet.breed) : "",
+      pet.birth_date ? row("Nascimento", `${formatDateISO(pet.birth_date)} (${getAge(pet.birth_date)})`) : "",
+      pet.weight_kg != null ? row("Peso", `${pet.weight_kg} kg`) : "",
+      pet.sex && pet.sex !== "unknown" ? row("Sexo", `${SEX_LABEL[pet.sex]}${pet.neutered ? " — castrado(a)" : ""}`) : "",
+      pet.microchip ? row("Microchip", pet.microchip) : "",
+      pet.allergies ? row("Alergias", `<span style="color:#dc2626">${pet.allergies}</span>`) : "",
+    ].filter(Boolean).join("");
 
-    if (procedures.length > 0) {
-      lines.push("PROCEDIMENTOS");
-      procedures.slice(0, 5).forEach((p) => {
-        lines.push(`• ${formatDateISO(p.performed_at)} [${PROCEDURE_TYPE_LABEL[p.type]}] ${p.title}${p.vet_name ? ` — Dr(a). ${p.vet_name}` : ""}`);
-        if (p.description) lines.push(`  ${p.description}`);
-      });
-      lines.push("");
-    }
+    const conditionsHtml = conditions.length > 0
+      ? section("Condições Crônicas", `<ul>${conditions.map((c) =>
+          `<li>${c.name}${c.diagnosed_at ? ` <span class="muted">desde ${formatDateISO(c.diagnosed_at)}</span>` : ""}</li>`
+        ).join("")}</ul>`)
+      : "";
 
-    if (incidents.length > 0) {
-      lines.push("ADVERSIDADES RECENTES");
-      incidents.slice(0, 5).forEach((i) => {
-        const d = new Date(i.occurred_at);
-        const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-        const label = INCIDENT_CONFIG[i.category as IncidentCategory]?.label ?? i.category;
-        lines.push(`• ${ds} [${label}]: ${i.description}`);
-      });
-      lines.push("");
-    }
+    const medsHtml = activeMeds.length > 0
+      ? section("Medicamentos Ativos", `<ul>${activeMeds.map((m) =>
+          `<li><strong>${m.name}</strong>${m.dose ? ` — ${m.dose}` : ""}${m.frequency ? ` — ${m.frequency}` : ""}</li>`
+        ).join("")}</ul>`)
+      : "";
 
-    if (pet.vet_name || pet.vet_phone) {
-      lines.push("VETERINÁRIO");
-      if (pet.vet_name) lines.push(`Dr(a). ${pet.vet_name}`);
-      if (pet.vet_phone) lines.push(pet.vet_phone);
-      lines.push("");
-    }
+    const vaccinesHtml = vaccines.length > 0
+      ? section("Vacinas", `<table>${vaccines.slice(0, 10).map((v) =>
+          `<tr><td class="label">${v.name}</td><td>${formatDateISO(v.applied_at)}${v.next_dose_at ? ` → próxima: ${formatDateISO(v.next_dose_at)}` : ""}</td></tr>`
+        ).join("")}</table>`)
+      : "";
 
-    if (pet.emergency_card_enabled) {
-      lines.push(`Cartão de emergência: ${getEmergencyUrl()}`);
-    }
+    const proceduresHtml = procedures.length > 0
+      ? section("Procedimentos Recentes", `<ul>${procedures.slice(0, 6).map((p) =>
+          `<li><span class="muted">${formatDateISO(p.performed_at)}</span> <strong>${p.title}</strong> [${PROCEDURE_TYPE_LABEL[p.type]}]${p.vet_name ? ` — Dr(a). ${p.vet_name}` : ""}${p.description ? `<br/><span class="muted">${p.description}</span>` : ""}</li>`
+        ).join("")}</ul>`)
+      : "";
 
-    const text = lines.join("\n");
+    const incidentsHtml = incidents.length > 0
+      ? section("Adversidades Recentes", `<ul>${incidents.slice(0, 5).map((i) => {
+          const d = new Date(i.occurred_at);
+          const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+          const label = INCIDENT_CONFIG[i.category as IncidentCategory]?.label ?? i.category;
+          return `<li><span class="muted">${ds}</span> [${label}]: ${i.description}</li>`;
+        }).join("")}</ul>`)
+      : "";
+
+    const vetHtml = (pet.vet_name || pet.vet_phone)
+      ? section("Veterinário de Referência", `<table>${pet.vet_name ? row("Nome", `Dr(a). ${pet.vet_name}`) : ""}${pet.vet_phone ? row("Telefone", pet.vet_phone) : ""}</table>`)
+      : "";
+
+    const photoHtml = pet.photo_url
+      ? `<img src="${pet.photo_url}" class="pet-photo" />`
+      : `<div class="pet-photo-placeholder">🐾</div>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1a1a1a; background: #fff; padding: 32px; font-size: 13px; }
+  .header { display: flex; align-items: center; gap: 20px; border-bottom: 2px solid #165c39; padding-bottom: 20px; margin-bottom: 24px; }
+  .pet-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+  .pet-photo-placeholder { width: 80px; height: 80px; border-radius: 50%; background: #e8f5ee; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  .header-text h1 { font-size: 22px; color: #165c39; }
+  .header-text p { color: #666; font-size: 12px; margin-top: 4px; }
+  .section { margin-bottom: 20px; }
+  h2 { font-size: 13px; font-weight: 700; color: #165c39; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2f0e8; padding-bottom: 6px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 5px 8px; vertical-align: top; }
+  td.label { color: #555; width: 140px; font-weight: 500; }
+  ul { padding-left: 16px; }
+  li { padding: 3px 0; line-height: 1.5; }
+  .muted { color: #888; font-size: 12px; }
+  .footer { margin-top: 32px; border-top: 1px solid #e2f0e8; padding-top: 12px; color: #999; font-size: 11px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="header">
+  ${photoHtml}
+  <div class="header-text">
+    <h1>Relatório de Saúde — ${pet.name}</h1>
+    <p>Gerado em ${now} via AUgenda</p>
+  </div>
+</div>
+${section("Informações Básicas", `<table>${basicRows}</table>`)}
+${conditionsHtml}
+${medsHtml}
+${vaccinesHtml}
+${proceduresHtml}
+${incidentsHtml}
+${vetHtml}
+<div class="footer">Gerado pelo AUgenda — app de saúde pet</div>
+</body>
+</html>`;
 
     if (Platform.OS === "web") {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        navigator.share({ title: `Relatório — ${pet.name}`, text });
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => alert("Relatório copiado!"));
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); }
+      return;
+    }
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: `Relatório — ${pet.name}`,
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Print.printAsync({ html });
       }
-    } else {
-      Share.share({ message: text, title: `Relatório — ${pet.name}` });
+    } catch {
+      Share.share({ message: `Relatório de saúde de ${pet.name} gerado pelo AUgenda.`, title: `Relatório — ${pet.name}` });
     }
   }
 
