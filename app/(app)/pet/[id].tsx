@@ -69,7 +69,7 @@ const PROCEDURE_TYPE_LABEL: Record<string, string> = {
 const PAGE_SIZE = 30;
 
 export default function PetDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { user } = useAuth();
   const router = useRouter();
   const [pet, setPet] = useState<Pet | null>(null);
@@ -90,7 +90,10 @@ export default function PetDetailScreen() {
   const [addingCondition, setAddingCondition] = useState(false);
   const [newConditionName, setNewConditionName] = useState("");
   const [savingCondition, setSavingCondition] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("vaccines");
+  const VALID_TABS: Tab[] = ["vaccines", "medications", "procedures", "logs"];
+  const [activeTab, setActiveTab] = useState<Tab>(
+    VALID_TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "vaccines"
+  );
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -101,6 +104,12 @@ export default function PetDetailScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (tabParam && VALID_TABS.includes(tabParam as Tab)) {
+      setActiveTab(tabParam as Tab);
+    }
+  }, [tabParam]);
 
   useFocusEffect(
     useCallback(() => {

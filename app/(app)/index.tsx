@@ -40,6 +40,13 @@ const TYPE_ICON: Record<string, string> = {
   procedure: "calendar-outline",
   reminder: "notifications-outline",
 };
+
+const TYPE_TAB: Record<string, string> = {
+  vaccine: "vaccines",
+  medication: "medications",
+  procedure: "procedures",
+  reminder: "vaccines",
+};
 const TYPE_LABEL: Record<string, string> = {
   vaccine: "Vacina",
   medication: "Medicamento",
@@ -332,7 +339,7 @@ export default function PetsScreen() {
                         <Text className="text-red-500 font-bold text-sm uppercase tracking-wide">Atrasados</Text>
                       </View>
                       {overdue.map((item) => (
-                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)} />
                       ))}
                     </View>
                   )}
@@ -343,7 +350,7 @@ export default function PetsScreen() {
                         <Text className="text-amber-600 font-bold text-sm uppercase tracking-wide">Hoje</Text>
                       </View>
                       {todayAlerts.map((item) => (
-                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)} />
                       ))}
                     </View>
                   )}
@@ -354,7 +361,7 @@ export default function PetsScreen() {
                         <Text className="text-sage-500 font-bold text-sm uppercase tracking-wide">Esta semana</Text>
                       </View>
                       {soon.map((item) => (
-                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}` as any)} />
+                        <AlertCard key={item.id} item={item} onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)} />
                       ))}
                     </View>
                   )}
