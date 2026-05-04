@@ -1165,9 +1165,17 @@ ${vetHtml}
                           <Text className="text-xs">{cfg.icon}</Text>
                           <Text className={`${cfg.color} text-xs font-medium`}>{cfg.label}</Text>
                         </View>
-                        <View className="items-end">
-                          <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
-                          <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                        <View className="flex-row items-center gap-3">
+                          <View className="items-end">
+                            <Text className="text-sage-600 text-xs font-medium">{dateStr}</Text>
+                            <Text className="text-sage-400 text-xs">{timeStr}</Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => router.push(`/(app)/pet/${id}/edit-incident?incidentId=${item.id}` as any)}
+                            className="p-1"
+                          >
+                            <Ionicons name="pencil-outline" size={15} color="#60b880" />
+                          </TouchableOpacity>
                         </View>
                       </View>
                       <Text className="text-sage-800 text-sm leading-relaxed">{item.description}</Text>
