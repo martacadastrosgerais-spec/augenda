@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import type { Pet } from "@/types";
@@ -41,6 +43,8 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   text: string;
+  photoUri?: string;
+  photoBase64?: string;
   action?: ParsedAction;
   status?: "pending" | "saved" | "cancelled";
 }
@@ -114,10 +118,29 @@ function displayValue(key: string, value: any, action?: ActionType): string {
   return formatFieldValue(key, value);
 }
 
+async function uploadIncidentPhoto(petId: string, incidentId: string, base64: string): Promise<string | null> {
+  try {
+    const path = `${petId}/${incidentId}.jpg`;
+    const byteChars = atob(base64);
+    const bytes = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+    const { error } = await supabase.storage.from("pet-incidents").upload(path, bytes, {
+      contentType: "image/jpeg",
+      upsert: true,
+    });
+    if (error) return null;
+    const { data } = supabase.storage.from("pet-incidents").getPublicUrl(path);
+    return data.publicUrl + `?t=${Date.now()}`;
+  } catch {
+    return null;
+  }
+}
+
 async function callClaude(
   userMessage: string,
   pets: Pet[],
-  history: { role: string; content: string }[]
+  history: { role: string; content: string }[],
+  photoBase64?: string | null
 ): Promise<ParsedAction> {
   const today = new Date().toLocaleDateString("pt-BR");
   const nowISO = new Date().toISOString();
@@ -150,11 +173,19 @@ Campos por ação:
 - unknown: quando faltar informação essencial — use "confirmation" para pedir o que falta
 
 Datas relativas: "hoje" = ${today}, "agora" = ${nowISO}. Interprete "às 14h" como hora de hoje.
-Se o tutor não especificar pet e houver só um, use-o. Se houver vários, pergunte.`;
+Se o tutor não especificar pet e houver só um, use-o. Se houver vários, pergunte.
+Se uma imagem for enviada junto com a mensagem, use-a para enriquecer a descrição do incidente.`;
+
+  const userContent: any = photoBase64
+    ? [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photoBase64 } },
+        { type: "text", text: userMessage },
+      ]
+    : userMessage;
 
   const messages = [
     ...history.slice(-6),
-    { role: "user", content: userMessage },
+    { role: "user", content: userContent },
   ];
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -181,7 +212,7 @@ Se o tutor não especificar pet e houver só um, use-o. Se houver vários, pergu
   return JSON.parse(match[0]) as ParsedAction;
 }
 
-async function saveAction(action: ParsedAction, userId: string): Promise<string> {
+async function saveAction(action: ParsedAction, userId: string, photoBase64?: string | null): Promise<string> {
   const { action: type, pet_id, data } = action;
 
   if (type === "add_vaccine") {
@@ -222,12 +253,16 @@ async function saveAction(action: ParsedAction, userId: string): Promise<string>
   }
 
   if (type === "add_incident") {
-    const { error } = await supabase.from("incidents").insert({
+    const { data: inserted, error } = await supabase.from("incidents").insert({
       pet_id, category: data.category,
       description: data.description, occurred_at: data.occurred_at,
-    });
+    }).select("id").single();
     if (error) throw error;
-    return `Adversidade registrada para ${action.pet_name}.`;
+    if (photoBase64 && inserted) {
+      const url = await uploadIncidentPhoto(pet_id, inserted.id, photoBase64);
+      if (url) await supabase.from("incidents").update({ photo_url: url }).eq("id", inserted.id);
+    }
+    return `Adversidade registrada para ${action.pet_name}.${photoBase64 ? " Foto anexada." : ""}`;
   }
 
   if (type === "add_log") {
@@ -281,6 +316,8 @@ export default function AssistantScreen() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const listRef = useRef<FlatList>(null);
   const historyRef = useRef<{ role: string; content: string }[]>([]);
@@ -303,6 +340,35 @@ export default function AssistantScreen() {
     setPets([...owned, ...member.filter((p) => !ownedIds.has(p.id))]);
   }
 
+  async function pickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images", allowsEditing: true, quality: 0.7, base64: true,
+    });
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setPhotoBase64(result.assets[0].base64 ?? null);
+    }
+  }
+
+  async function takePhoto() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm.status !== "granted") return;
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true, quality: 0.7, base64: true,
+    });
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setPhotoBase64(result.assets[0].base64 ?? null);
+    }
+  }
+
+  function clearPhoto() {
+    setPhotoUri(null);
+    setPhotoBase64(null);
+  }
+
   function addMessage(msg: Omit<Message, "id">) {
     const newMsg = { ...msg, id: Date.now().toString() + Math.random() };
     setMessages((prev) => [newMsg, ...prev]);
@@ -312,24 +378,31 @@ export default function AssistantScreen() {
   async function handleSend() {
     const text = input.trim();
     if (!text || loading) return;
-    setInput("");
 
-    addMessage({ role: "user", text });
+    const currentPhotoUri = photoUri;
+    const currentPhotoBase64 = photoBase64;
+
+    setInput("");
+    clearPhoto();
+
+    addMessage({ role: "user", text, photoUri: currentPhotoUri ?? undefined });
     historyRef.current.push({ role: "user", content: text });
 
     setLoading(true);
     try {
-      const parsed = await callClaude(text, pets, historyRef.current);
+      const parsed = await callClaude(text, pets, historyRef.current, currentPhotoBase64);
       historyRef.current.push({ role: "assistant", content: parsed.confirmation });
 
-      const msg = addMessage({
+      const hasPendingAction = parsed.action !== "unknown" && !!parsed.pet_id;
+
+      addMessage({
         role: "assistant",
         text: parsed.confirmation,
-        action: parsed.action !== "unknown" && parsed.pet_id ? parsed : undefined,
-        status: parsed.action !== "unknown" && parsed.pet_id ? "pending" : undefined,
+        action: hasPendingAction ? parsed : undefined,
+        status: hasPendingAction ? "pending" : undefined,
+        photoBase64: hasPendingAction && parsed.action === "add_incident" ? currentPhotoBase64 ?? undefined : undefined,
       });
 
-      // Auto-scroll
       setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 100);
     } catch (e: any) {
       addMessage({ role: "assistant", text: `Ops, algo deu errado: ${e.message}` });
@@ -337,12 +410,12 @@ export default function AssistantScreen() {
     setLoading(false);
   }
 
-  async function handleConfirm(msgId: string, action: ParsedAction) {
+  async function handleConfirm(msgId: string, action: ParsedAction, msgPhotoBase64?: string) {
     setMessages((prev) =>
       prev.map((m) => m.id === msgId ? { ...m, status: "saving" as any } : m)
     );
     try {
-      const successText = await saveAction(action, user!.id);
+      const successText = await saveAction(action, user!.id, msgPhotoBase64);
       setMessages((prev) =>
         prev.map((m) => m.id === msgId ? { ...m, status: "saved", text: successText } : m)
       );
@@ -366,6 +439,14 @@ export default function AssistantScreen() {
     if (isUser) {
       return (
         <View className="items-end mb-3 px-4">
+          {item.photoUri && (
+            <Image
+              source={{ uri: item.photoUri }}
+              className="rounded-2xl rounded-tr-sm mb-1"
+              style={{ width: 180, height: 180 }}
+              resizeMode="cover"
+            />
+          )}
           <View className="bg-sage-400 rounded-2xl rounded-tr-sm px-4 py-3 max-w-xs">
             <Text className="text-white text-sm">{item.text}</Text>
           </View>
@@ -385,7 +466,6 @@ export default function AssistantScreen() {
             <Text className="text-sm">🐾</Text>
           </View>
           <View className="flex-1">
-            {/* Bubble de texto */}
             <View className={`rounded-2xl rounded-tl-sm px-4 py-3 ${isSaved ? "bg-green-50 border border-green-200" : "bg-white border border-sage-100"}`}>
               {isSaved && <Ionicons name="checkmark-circle" size={16} color="#22c55e" style={{ marginBottom: 4 }} />}
               <Text className={`text-sm leading-relaxed ${isSaved ? "text-green-700" : "text-sage-800"}`}>
@@ -393,7 +473,6 @@ export default function AssistantScreen() {
               </Text>
             </View>
 
-            {/* Card de confirmação */}
             {hasPendingAction && item.action && (
               <View className="bg-white border border-sage-200 rounded-2xl mt-2 overflow-hidden">
                 <View className="px-4 pt-3 pb-2 border-b border-sage-50 flex-row items-center gap-2">
@@ -403,6 +482,12 @@ export default function AssistantScreen() {
                     </Text>
                   </View>
                   <Text className="text-sage-600 text-xs font-medium">{item.action.pet_name}</Text>
+                  {item.photoBase64 && (
+                    <View className="ml-auto flex-row items-center gap-1">
+                      <Ionicons name="image-outline" size={12} color="#60b880" />
+                      <Text className="text-sage-400 text-xs">Foto</Text>
+                    </View>
+                  )}
                 </View>
                 <View className="px-4 py-3 gap-1">
                   {Object.entries(item.action.data)
@@ -427,7 +512,7 @@ export default function AssistantScreen() {
                   </TouchableOpacity>
                   <View className="w-px bg-sage-100" />
                   <TouchableOpacity
-                    onPress={() => handleConfirm(item.id, item.action!)}
+                    onPress={() => handleConfirm(item.id, item.action!, item.photoBase64)}
                     className="flex-1 py-3 items-center"
                   >
                     {isSaving
@@ -470,8 +555,45 @@ export default function AssistantScreen() {
           showsVerticalScrollIndicator={false}
         />
 
+        {/* Thumbnail da foto selecionada */}
+        {photoUri && (
+          <View className="px-4 pb-2">
+            <View className="relative self-start">
+              <Image
+                source={{ uri: photoUri }}
+                className="rounded-xl"
+                style={{ width: 64, height: 64 }}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                onPress={clearPhoto}
+                className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full w-5 h-5 items-center justify-center"
+              >
+                <Ionicons name="close" size={12} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Input */}
         <View className="px-4 pb-4 pt-2 border-t border-sage-100 bg-cream flex-row items-end gap-2">
+          {/* Botão câmera */}
+          {Platform.OS !== "web" && (
+            <TouchableOpacity
+              onPress={takePhoto}
+              className="w-11 h-11 rounded-full items-center justify-center bg-sage-50 border border-sage-200"
+            >
+              <Ionicons name="camera-outline" size={20} color="#165c39" />
+            </TouchableOpacity>
+          )}
+          {/* Botão galeria */}
+          <TouchableOpacity
+            onPress={pickPhoto}
+            className="w-11 h-11 rounded-full items-center justify-center bg-sage-50 border border-sage-200"
+          >
+            <Ionicons name="image-outline" size={20} color="#165c39" />
+          </TouchableOpacity>
+
           <TextInput
             className="flex-1 bg-white border border-sage-200 rounded-2xl px-4 py-3 text-sage-800 text-sm"
             placeholder="Ex: Pipo tomou Bravecto hoje..."
