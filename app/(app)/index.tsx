@@ -216,9 +216,9 @@ export default function PetsScreen() {
         colors={["#165c39", "#1e7a4a"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        className="px-5 pt-4 pb-8"
+        style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}
       >
-        <View className="flex-row items-start justify-between mb-5">
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
           <View>
             <Text className="text-white/60 text-xs capitalize mb-0.5">{formatTodayLabel()}</Text>
             <Text className="text-white text-2xl font-bold">
@@ -228,27 +228,27 @@ export default function PetsScreen() {
         </View>
 
         {/* Stats row */}
-        <View className="flex-row gap-3">
-          <View className="flex-1 bg-white/10 rounded-2xl p-3">
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}>
             <Text className="text-white/60 text-xs mb-1">Pets</Text>
             <Text className="text-white text-2xl font-bold">{pets.length}</Text>
           </View>
           <TouchableOpacity
-            className={`flex-1 rounded-2xl p-3 ${overdue.length > 0 ? "bg-red-500/80" : "bg-white/10"}`}
+            style={{ flex: 1, backgroundColor: overdue.length > 0 ? "rgba(239,68,68,0.75)" : "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
             onPress={() => router.push("/(app)/calendar")}
           >
             <Text className="text-white/60 text-xs mb-1">Atrasados</Text>
             <Text className="text-white text-2xl font-bold">{overdue.length}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`flex-1 rounded-2xl p-3 ${todayAlerts.length > 0 ? "bg-amber-500/70" : "bg-white/10"}`}
+            style={{ flex: 1, backgroundColor: todayAlerts.length > 0 ? "rgba(245,158,11,0.65)" : "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
             onPress={() => router.push("/(app)/calendar")}
           >
             <Text className="text-white/60 text-xs mb-1">Hoje</Text>
             <Text className="text-white text-2xl font-bold">{todayAlerts.length}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-white/10 rounded-2xl p-3"
+            style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
             onPress={() => router.push("/(app)/calendar")}
           >
             <Text className="text-white/60 text-xs mb-1">Em breve</Text>
@@ -257,7 +257,7 @@ export default function PetsScreen() {
         </View>
       </LinearGradient>
 
-      <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -16 }}>
+      <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
