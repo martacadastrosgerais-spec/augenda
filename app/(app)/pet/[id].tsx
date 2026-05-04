@@ -299,12 +299,15 @@ export default function PetDetailScreen() {
       : "";
 
     const incidentsHtml = incidents.length > 0
-      ? section("Adversidades Recentes", `<ul>${incidents.slice(0, 5).map((i) => {
+      ? section("Adversidades Recentes", incidents.slice(0, 5).map((i) => {
           const d = new Date(i.occurred_at);
           const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
           const label = INCIDENT_CONFIG[i.category as IncidentCategory]?.label ?? i.category;
-          return `<li><span class="muted">${ds}</span> [${label}]: ${i.description}</li>`;
-        }).join("")}</ul>`)
+          return `<div class="incident-item">
+            <div class="incident-header"><span class="muted">${ds}</span> <strong>[${label}]</strong> ${i.description}</div>
+            ${i.photo_url ? `<img src="${i.photo_url}" class="incident-photo" />` : ""}
+          </div>`;
+        }).join(""))
       : "";
 
     const vetHtml = (pet.vet_name || pet.vet_phone)
@@ -336,6 +339,9 @@ export default function PetDetailScreen() {
   li { padding: 3px 0; line-height: 1.5; }
   .muted { color: #888; font-size: 12px; }
   .footer { margin-top: 32px; border-top: 1px solid #e2f0e8; padding-top: 12px; color: #999; font-size: 11px; text-align: center; }
+  .incident-item { margin-bottom: 12px; }
+  .incident-header { margin-bottom: 6px; line-height: 1.5; }
+  .incident-photo { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #e2f0e8; }
 </style>
 </head>
 <body>
