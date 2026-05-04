@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   Image,
   ActivityIndicator,
@@ -12,7 +11,6 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { cacheGet, cacheSet } from "@/lib/cache";
@@ -171,11 +169,11 @@ export default function PetsScreen() {
     const items: AlertItem[] = [];
     (vacRes.data ?? []).forEach((v) => {
       const d = v.next_dose_at!;
-      items.push({ id: `vac-${v.id}`, petName: petMap[v.pet_id], petId: v.pet_id, title: `Vacina: ${v.name}`, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "vaccine" });
+      items.push({ id: `vac-${v.id}`, petName: petMap[v.pet_id], petId: v.pet_id, title: v.name, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "vaccine" });
     });
     (medRes.data ?? []).forEach((m) => {
       const d = m.ends_at!;
-      items.push({ id: `med-${m.id}`, petName: petMap[m.pet_id], petId: m.pet_id, title: `Fim: ${m.name}`, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "medication" });
+      items.push({ id: `med-${m.id}`, petName: petMap[m.pet_id], petId: m.pet_id, title: m.name, date: d, urgency: d < today ? "overdue" : d === today ? "today" : "soon", type: "medication" });
     });
     (procRes.data ?? []).forEach((p) => {
       const d = p.performed_at;
@@ -198,8 +196,8 @@ export default function PetsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-sage-700 items-center justify-center">
-        <ActivityIndicator color="#fff" size="large" />
+      <SafeAreaView className="flex-1 bg-cream items-center justify-center">
+        <ActivityIndicator color="#165c39" size="large" />
       </SafeAreaView>
     );
   }
@@ -207,270 +205,247 @@ export default function PetsScreen() {
   const overdue = alerts.filter((a) => a.urgency === "overdue");
   const todayAlerts = alerts.filter((a) => a.urgency === "today");
   const soon = alerts.filter((a) => a.urgency === "soon");
-  const topAlert = overdue[0] ?? todayAlerts[0] ?? null;
+  const urgentAlerts = [...overdue, ...todayAlerts];
 
   return (
-    <SafeAreaView className="flex-1 bg-sage-700" edges={["top"]}>
-      {/* Header com gradiente */}
-      <LinearGradient
-        colors={["#165c39", "#1e7a4a"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}
+    <SafeAreaView className="flex-1 bg-cream" edges={["top"]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#165c39" colors={["#165c39"]} />
+        }
       >
-        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
-          <View>
-            <Text className="text-white/60 text-xs capitalize mb-0.5">{formatTodayLabel()}</Text>
-            <Text className="text-white text-2xl font-bold">
+        {/* Header limpo */}
+        <View className="px-5 pt-5 pb-4">
+          <Text className="text-sage-400 text-sm capitalize mb-1">{formatTodayLabel()}</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sage-800 text-2xl font-bold">
               {getGreeting()}{userName ? `, ${userName}` : ""} 👋
             </Text>
-          </View>
-        </View>
-
-        {/* Stats row */}
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <View style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}>
-            <Text className="text-white/60 text-xs mb-1">Pets</Text>
-            <Text className="text-white text-2xl font-bold">{pets.length}</Text>
-          </View>
-          <TouchableOpacity
-            style={{ flex: 1, backgroundColor: overdue.length > 0 ? "rgba(239,68,68,0.75)" : "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
-            onPress={() => router.push("/(app)/calendar")}
-          >
-            <Text className="text-white/60 text-xs mb-1">Atrasados</Text>
-            <Text className="text-white text-2xl font-bold">{overdue.length}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flex: 1, backgroundColor: todayAlerts.length > 0 ? "rgba(245,158,11,0.65)" : "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
-            onPress={() => router.push("/(app)/calendar")}
-          >
-            <Text className="text-white/60 text-xs mb-1">Hoje</Text>
-            <Text className="text-white text-2xl font-bold">{todayAlerts.length}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 16, padding: 12 }}
-            onPress={() => router.push("/(app)/calendar")}
-          >
-            <Text className="text-white/60 text-xs mb-1">Em breve</Text>
-            <Text className="text-white text-2xl font-bold">{soon.length}</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      <View className="flex-1 bg-cream rounded-t-3xl overflow-hidden" style={{ marginTop: -12 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#32a060" colors={["#32a060"]} />
-          }
-        >
-          {isOffline && (
-            <View className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex-row items-center gap-2">
-              <Ionicons name="cloud-offline-outline" size={14} color="#d97706" />
-              <Text className="text-amber-700 text-xs flex-1">Sem conexão — dados em cache</Text>
-            </View>
-          )}
-          <FormError message={error} />
-
-          {/* Ações rápidas */}
-          <View className="px-5 pt-5 pb-2">
-            <Text className="text-xs font-bold text-sage-400 uppercase tracking-widest mb-3">Ações rápidas</Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 bg-sage-400 rounded-2xl py-4 items-center gap-1.5"
-                onPress={() => router.push("/(app)/pet/new")}
-                accessibilityLabel="Adicionar novo pet"
-              >
-                <Ionicons name="add-circle-outline" size={22} color="#fff" />
-                <Text className="text-white text-xs font-semibold">Novo pet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-white rounded-2xl py-4 items-center gap-1.5 border border-sage-100"
-                onPress={() => router.push("/(app)/assistant")}
-              >
-                <Ionicons name="sparkles-outline" size={22} color="#165c39" />
-                <Text className="text-sage-700 text-xs font-semibold">Assistente</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-white rounded-2xl py-4 items-center gap-1.5 border border-sage-100"
-                onPress={() => router.push("/(app)/calendar")}
-              >
-                <Ionicons name="calendar-outline" size={22} color="#165c39" />
-                <Text className="text-sage-700 text-xs font-semibold">Agenda</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-white rounded-2xl py-4 items-center gap-1.5 border border-sage-100"
-                onPress={() => router.push("/(app)/join")}
-                accessibilityLabel="Entrar com código de convite"
-              >
-                <Ionicons name="enter-outline" size={22} color="#165c39" />
-                <Text className="text-sage-700 text-xs font-semibold">Entrar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/(app)/join")}
+              className="flex-row items-center gap-1.5 border border-sage-200 rounded-full px-3 py-1.5"
+            >
+              <Ionicons name="enter-outline" size={14} color="#165c39" />
+              <Text className="text-sage-600 text-xs font-medium">Entrar</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Destaque: alerta mais urgente */}
-          {topAlert && (
-            <View className="px-5 mt-4">
-              <Text className="text-xs font-bold text-sage-400 uppercase tracking-widest mb-3">Atenção</Text>
-              <TouchableOpacity
-                onPress={() => router.push(`/(app)/pet/${topAlert.petId}?tab=${TYPE_TAB[topAlert.type]}` as any)}
-                className={`rounded-2xl p-4 flex-row items-center gap-4 ${topAlert.urgency === "overdue" ? "bg-red-500" : "bg-amber-400"}`}
-                style={{ elevation: 3 }}
-              >
-                <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center">
-                  <Ionicons name={TYPE_ICON[topAlert.type] as any} size={24} color="#fff" />
+          {/* Linha de contexto */}
+          {alerts.length > 0 && (
+            <View className="flex-row items-center gap-2 mt-3 flex-wrap">
+              {overdue.length > 0 && (
+                <View className="flex-row items-center gap-1 bg-red-50 border border-red-100 rounded-full px-2.5 py-1">
+                  <View className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <Text className="text-red-500 text-xs font-medium">{overdue.length} atrasado{overdue.length !== 1 ? "s" : ""}</Text>
                 </View>
-                <View className="flex-1">
-                  <Text className="text-white/80 text-xs font-medium mb-0.5">{topAlert.petName} · {TYPE_LABEL[topAlert.type]}</Text>
-                  <Text className="text-white font-bold text-base" numberOfLines={1}>{topAlert.title}</Text>
-                  <Text className="text-white/70 text-xs mt-0.5">
-                    {topAlert.urgency === "overdue" ? `Atrasado desde ${formatDateISO(topAlert.date)}` : topAlert.urgency === "today" ? "Para hoje" : formatDateISO(topAlert.date)}
-                  </Text>
+              )}
+              {todayAlerts.length > 0 && (
+                <View className="flex-row items-center gap-1 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1">
+                  <View className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  <Text className="text-amber-600 text-xs font-medium">{todayAlerts.length} para hoje</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
-              </TouchableOpacity>
-
-              {/* Demais alertas */}
-              {alerts.length > 1 && (
-                <View className="bg-white rounded-2xl mt-2 border border-sage-100 overflow-hidden">
-                  {alerts.slice(1, 4).map((item, i) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)}
-                      className={`flex-row items-center gap-3 px-4 py-3 ${i > 0 ? "border-t border-sage-50" : ""}`}
-                    >
-                      <View className={`w-8 h-8 rounded-full items-center justify-center ${item.urgency === "overdue" ? "bg-red-100" : item.urgency === "today" ? "bg-amber-100" : "bg-sage-100"}`}>
-                        <Ionicons name={TYPE_ICON[item.type] as any} size={15} color={item.urgency === "overdue" ? "#ef4444" : item.urgency === "today" ? "#d97706" : "#32a060"} />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-sage-400 text-xs">{item.petName} · {TYPE_LABEL[item.type]}</Text>
-                        <Text className="text-sage-700 text-sm font-medium" numberOfLines={1}>{item.title}</Text>
-                      </View>
-                      <Text className={`text-xs font-medium ${item.urgency === "overdue" ? "text-red-400" : item.urgency === "today" ? "text-amber-500" : "text-sage-400"}`}>
-                        {item.urgency === "overdue" ? "Atrasado" : item.urgency === "today" ? "Hoje" : formatDateISO(item.date)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                  {alerts.length > 4 && (
-                    <TouchableOpacity
-                      onPress={() => router.push("/(app)/calendar")}
-                      className="border-t border-sage-50 px-4 py-3 flex-row items-center justify-center gap-1"
-                    >
-                      <Text className="text-sage-400 text-xs font-medium">Ver todos os {alerts.length} alertas</Text>
-                      <Ionicons name="arrow-forward" size={12} color="#60b880" />
-                    </TouchableOpacity>
-                  )}
+              )}
+              {soon.length > 0 && (
+                <View className="flex-row items-center gap-1 bg-sage-50 border border-sage-200 rounded-full px-2.5 py-1">
+                  <View className="w-1.5 h-1.5 rounded-full bg-sage-300" />
+                  <Text className="text-sage-500 text-xs font-medium">{soon.length} esta semana</Text>
                 </View>
               )}
             </View>
           )}
+        </View>
 
-          {/* Lista de pets */}
-          <View className="px-5 mt-5">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-xs font-bold text-sage-400 uppercase tracking-widest">Meus Pets</Text>
-              <Text className="text-sage-300 text-xs">{pets.length} pet{pets.length !== 1 ? "s" : ""}</Text>
-            </View>
+        {isOffline && (
+          <View className="mx-5 mb-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2 flex-row items-center gap-2">
+            <Ionicons name="cloud-offline-outline" size={14} color="#d97706" />
+            <Text className="text-amber-600 text-xs flex-1">Sem conexão — dados em cache</Text>
+          </View>
+        )}
+        <FormError message={error} />
 
-            {pets.length === 0 && alerts.length === 0 ? (
-              <View className="items-center justify-center px-8 mt-12">
-                <Text className="text-5xl mb-4">🐾</Text>
-                <Text className="text-xl font-semibold text-sage-600 text-center">Nenhum pet cadastrado ainda</Text>
-                <Text className="text-sage-400 text-center mt-2 mb-6">Adicione seu primeiro pet para começar</Text>
+        {/* Alertas urgentes */}
+        {urgentAlerts.length > 0 && (
+          <View className="px-5 mb-5">
+            <Text className="text-xs font-semibold text-sage-400 uppercase tracking-widest mb-3">Precisam de atenção</Text>
+            <View className="bg-white rounded-2xl overflow-hidden border border-sage-100"
+              style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
+            >
+              {urgentAlerts.slice(0, 5).map((item, i) => {
+                const isOverdue = item.urgency === "overdue";
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)}
+                    className={`flex-row items-center gap-3 px-4 py-3.5 ${i > 0 ? "border-t border-sage-50" : ""}`}
+                  >
+                    <View className={`w-9 h-9 rounded-xl items-center justify-center ${isOverdue ? "bg-red-50" : "bg-amber-50"}`}>
+                      <Ionicons name={TYPE_ICON[item.type] as any} size={17} color={isOverdue ? "#ef4444" : "#d97706"} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sage-700 text-sm font-semibold" numberOfLines={1}>{item.title}</Text>
+                      <Text className="text-sage-400 text-xs mt-0.5">{item.petName} · {TYPE_LABEL[item.type]}</Text>
+                    </View>
+                    <View className={`px-2 py-0.5 rounded-full ${isOverdue ? "bg-red-50" : "bg-amber-50"}`}>
+                      <Text className={`text-xs font-medium ${isOverdue ? "text-red-400" : "text-amber-500"}`}>
+                        {isOverdue ? "Atrasado" : "Hoje"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+              {urgentAlerts.length > 5 && (
                 <TouchableOpacity
-                  onPress={() => router.push("/(app)/pet/new")}
-                  className="bg-sage-400 rounded-2xl px-8 py-4 flex-row items-center gap-2"
+                  onPress={() => router.push("/(app)/calendar")}
+                  className="border-t border-sage-50 px-4 py-3 flex-row items-center justify-center gap-1"
                 >
-                  <Ionicons name="add" size={20} color="#fff" />
-                  <Text className="text-white font-semibold">Adicionar pet</Text>
+                  <Text className="text-sage-400 text-xs">+{urgentAlerts.length - 5} mais na agenda</Text>
+                  <Ionicons name="arrow-forward" size={11} color="#60b880" />
                 </TouchableOpacity>
-              </View>
-            ) : (
-              pets.map((item) => (
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Alertas em breve (colapsados) */}
+        {soon.length > 0 && (
+          <View className="px-5 mb-5">
+            <Text className="text-xs font-semibold text-sage-400 uppercase tracking-widest mb-3">Esta semana</Text>
+            <View className="bg-white rounded-2xl overflow-hidden border border-sage-100"
+              style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
+            >
+              {soon.slice(0, 3).map((item, i) => (
                 <TouchableOpacity
                   key={item.id}
-                  className="bg-white rounded-2xl mb-3 overflow-hidden border border-sage-50"
-                  style={{ elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 }}
-                  onPress={() => router.push(`/(app)/pet/${item.id}`)}
+                  onPress={() => router.push(`/(app)/pet/${item.petId}?tab=${TYPE_TAB[item.type]}` as any)}
+                  className={`flex-row items-center gap-3 px-4 py-3.5 ${i > 0 ? "border-t border-sage-50" : ""}`}
                 >
-                  <View className="flex-row items-center p-4">
-                    {item.photo_url ? (
-                      <Image source={{ uri: item.photo_url }} className="w-16 h-16 rounded-2xl bg-sage-100" />
-                    ) : (
-                      <View className="w-16 h-16 rounded-2xl bg-sage-100 items-center justify-center">
-                        <Text className="text-3xl">{SPECIES_ICON[item.species]}</Text>
+                  <View className="w-9 h-9 rounded-xl bg-sage-50 items-center justify-center">
+                    <Ionicons name={TYPE_ICON[item.type] as any} size={17} color="#60b880" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sage-700 text-sm font-semibold" numberOfLines={1}>{item.title}</Text>
+                    <Text className="text-sage-400 text-xs mt-0.5">{item.petName} · {TYPE_LABEL[item.type]}</Text>
+                  </View>
+                  <Text className="text-sage-400 text-xs">{formatDateISO(item.date)}</Text>
+                </TouchableOpacity>
+              ))}
+              {soon.length > 3 && (
+                <TouchableOpacity
+                  onPress={() => router.push("/(app)/calendar")}
+                  className="border-t border-sage-50 px-4 py-3 flex-row items-center justify-center gap-1"
+                >
+                  <Text className="text-sage-400 text-xs">+{soon.length - 3} mais na agenda</Text>
+                  <Ionicons name="arrow-forward" size={11} color="#60b880" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Pets */}
+        <View className="px-5">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-xs font-semibold text-sage-400 uppercase tracking-widest">Meus Pets</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(app)/pet/new")}
+              className="flex-row items-center gap-1 bg-sage-400 rounded-full px-3 py-1.5"
+              accessibilityLabel="Adicionar novo pet"
+            >
+              <Ionicons name="add" size={14} color="#fff" />
+              <Text className="text-white text-xs font-semibold">Novo pet</Text>
+            </TouchableOpacity>
+          </View>
+
+          {pets.length === 0 ? (
+            <View className="items-center py-12">
+              <Text className="text-4xl mb-3">🐾</Text>
+              <Text className="text-sage-600 font-semibold text-base text-center">Nenhum pet ainda</Text>
+              <Text className="text-sage-400 text-sm text-center mt-1 mb-5">Adicione seu primeiro pet para começar</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/(app)/pet/new")}
+                className="bg-sage-400 rounded-2xl px-6 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text className="text-white font-semibold">Adicionar pet</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            pets.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                className="bg-white rounded-2xl mb-3 flex-row items-center p-4 border border-sage-50"
+                style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
+                onPress={() => router.push(`/(app)/pet/${item.id}`)}
+              >
+                {item.photo_url ? (
+                  <Image source={{ uri: item.photo_url }} style={{ width: 56, height: 56, borderRadius: 16 }} />
+                ) : (
+                  <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: "#e8f5ee", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 26 }}>{SPECIES_ICON[item.species]}</Text>
+                  </View>
+                )}
+                <View className="ml-3 flex-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-sage-800 text-base font-bold">{item.name}</Text>
+                    {!item.isOwner && (
+                      <View className="bg-sage-100 px-2 py-0.5 rounded-full">
+                        <Text className="text-sage-500 text-xs">Compartilhado</Text>
                       </View>
                     )}
-                    <View className="ml-4 flex-1">
-                      <View className="flex-row items-center gap-2 mb-0.5">
-                        <Text className="text-lg font-bold text-sage-800">{item.name}</Text>
-                        {!item.isOwner && (
-                          <View className="bg-sage-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-sage-500 text-xs">Compartilhado</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="text-sage-500 text-sm">
-                        {SPECIES_LABEL[item.species]}{item.breed ? ` · ${item.breed}` : ""}
-                      </Text>
-                      {item.birth_date && (
-                        <Text className="text-sage-400 text-xs mt-1">{getAge(item.birth_date)}</Text>
-                      )}
-                    </View>
-                    <View className="w-8 h-8 rounded-full bg-sage-50 items-center justify-center">
-                      <Ionicons name="chevron-forward" size={16} color="#60b880" />
-                    </View>
                   </View>
-                </TouchableOpacity>
-              ))
-            )}
+                  <Text className="text-sage-400 text-sm mt-0.5">
+                    {SPECIES_LABEL[item.species]}{item.breed ? ` · ${item.breed}` : ""}
+                  </Text>
+                  {item.birth_date && (
+                    <Text className="text-sage-300 text-xs mt-0.5">{getAge(item.birth_date)}</Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#c8e6d0" />
+              </TouchableOpacity>
+            ))
+          )}
 
-            {/* Arquivados */}
-            <TouchableOpacity
-              className="flex-row items-center gap-2 py-3 mt-1"
-              onPress={() => { if (!showArchived) fetchArchivedPets(); setShowArchived((v) => !v); }}
-            >
-              <Ionicons name={showArchived ? "chevron-up" : "archive-outline"} size={15} color="#60b880" />
-              <Text className="text-sage-400 text-sm">{showArchived ? "Ocultar arquivados" : "Ver pets arquivados"}</Text>
-            </TouchableOpacity>
+          {/* Arquivados */}
+          <TouchableOpacity
+            className="flex-row items-center gap-2 py-3 mt-1"
+            onPress={() => { if (!showArchived) fetchArchivedPets(); setShowArchived((v) => !v); }}
+          >
+            <Ionicons name={showArchived ? "chevron-up" : "archive-outline"} size={14} color="#a0c4b0" />
+            <Text className="text-sage-300 text-sm">{showArchived ? "Ocultar arquivados" : "Ver pets arquivados"}</Text>
+          </TouchableOpacity>
 
-            {showArchived && (
-              <View className="mt-1">
-                {loadingArchived ? (
-                  <ActivityIndicator color="#32a060" style={{ marginVertical: 12 }} />
-                ) : archivedPets.length === 0 ? (
-                  <Text className="text-sage-300 text-sm text-center py-4">Nenhum pet arquivado</Text>
-                ) : (
-                  archivedPets.map((item) => (
-                    <View key={item.id} className="bg-white/60 rounded-2xl p-4 mb-3 flex-row items-center border border-sage-100">
-                      {item.photo_url ? (
-                        <Image source={{ uri: item.photo_url }} className="w-12 h-12 rounded-xl bg-sage-100 opacity-60" />
-                      ) : (
-                        <View className="w-12 h-12 rounded-xl bg-sage-100 items-center justify-center opacity-60">
-                          <Text className="text-2xl">{SPECIES_ICON[item.species]}</Text>
-                        </View>
-                      )}
-                      <View className="ml-3 flex-1">
-                        <Text className="text-base font-semibold text-sage-400">{item.name}</Text>
-                        <Text className="text-sage-300 text-xs">{SPECIES_LABEL[item.species]}{item.breed ? ` · ${item.breed}` : ""}</Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => unarchivePet(item.id)}
-                        className="border border-sage-200 rounded-xl px-3 py-2 flex-row items-center gap-1"
-                      >
-                        <Ionicons name="refresh-outline" size={13} color="#32a060" />
-                        <Text className="text-sage-500 text-xs font-medium">Restaurar</Text>
-                      </TouchableOpacity>
+          {showArchived && (
+            <View>
+              {loadingArchived ? (
+                <ActivityIndicator color="#32a060" style={{ marginVertical: 12 }} />
+              ) : archivedPets.length === 0 ? (
+                <Text className="text-sage-300 text-sm text-center py-4">Nenhum pet arquivado</Text>
+              ) : (
+                archivedPets.map((item) => (
+                  <View key={item.id} className="bg-white/50 rounded-2xl p-4 mb-3 flex-row items-center border border-sage-100">
+                    <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#e8f5ee", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+                      <Text style={{ fontSize: 22 }}>{SPECIES_ICON[item.species]}</Text>
                     </View>
-                  ))
-                )}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </View>
+                    <View className="ml-3 flex-1">
+                      <Text className="text-sage-400 font-semibold">{item.name}</Text>
+                      <Text className="text-sage-300 text-xs">{SPECIES_LABEL[item.species]}{item.breed ? ` · ${item.breed}` : ""}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => unarchivePet(item.id)}
+                      className="border border-sage-200 rounded-xl px-3 py-2 flex-row items-center gap-1"
+                    >
+                      <Ionicons name="refresh-outline" size={12} color="#32a060" />
+                      <Text className="text-sage-500 text-xs font-medium">Restaurar</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
