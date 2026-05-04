@@ -341,7 +341,7 @@ export default function PetDetailScreen() {
   .footer { margin-top: 32px; border-top: 1px solid #e2f0e8; padding-top: 12px; color: #999; font-size: 11px; text-align: center; }
   .incident-item { margin-bottom: 12px; }
   .incident-header { margin-bottom: 6px; line-height: 1.5; }
-  .incident-photo { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #e2f0e8; }
+  .incident-photo { width: 100%; max-width: 320px; height: auto; object-fit: contain; border-radius: 8px; border: 1px solid #e2f0e8; display: block; }
 </style>
 </head>
 <body>
